@@ -45,8 +45,10 @@ def learning_curve(stages: list[dict], reversal_start: int | None, out: Path) ->
     ax.set_xlabel("Eğitim bölümü")
     ax.set_ylabel("A tercih oranı  A/(A+B)")
     ax.set_title("Seçim testinde A tercihi (ortalama ve %95 GA)")
-    ax.legend(loc="center left", fontsize=8)
-    fig.tight_layout()
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3, fontsize=8, frameon=False)
+    fig.text(0.01, 0.01, "Not: 'öğrenme kapalı' ve 'rastgele' koşulları değişmez, aynı düzenlerle test edildikleri için çizgileri düzdür.",
+             fontsize=6.5, color="#555")
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
     fig.savefig(out, dpi=140)
     plt.close(fig)
     return out
@@ -72,27 +74,40 @@ def contacts_curve(contacts: dict[str, np.ndarray], reversal_start: int | None, 
     return out
 
 
-def trajectories(panels: dict[str, dict], out: Path, n_show: int = 6) -> Path:
-    """panels: {başlık: record_trajectories çıktısı}. A=yeşil, B=turuncu."""
+def _normalize(rec: dict, i: int):
+    """Denemeyi merkezde sıfırla ve döndür: A kaynağı (+d, 0), B kaynağı (-d, 0)."""
+    a, b = rec["src_pos"][i, 0], rec["src_pos"][i, 1]
+    c = (a + b) / 2
+    u = a - c
+    ang = np.arctan2(u[1], u[0])
+    rot = np.array([[np.cos(-ang), -np.sin(-ang)], [np.sin(-ang), np.cos(-ang)]])
+    path = (rec["path"][:, i] - c) @ rot.T
+    return path, np.linalg.norm(u)
+
+
+def trajectories(panels: dict[str, dict], out: Path, n_show: int = 8) -> Path:
+    """Her deneme döndürülmüştür: A kaynağı (yeşil) sağda, B kaynağı (turuncu) solda."""
     plt = _plt()
-    fig, axes = plt.subplots(1, len(panels), figsize=(4.2 * len(panels), 4.4), squeeze=False)
+    fig, axes = plt.subplots(1, len(panels), figsize=(4.4 * len(panels), 4.0), squeeze=False)
     for ax, (title, rec) in zip(axes[0], panels.items()):
-        L = rec["arena"]
         n = min(n_show, rec["path"].shape[1])
         for i in range(n):
-            p = rec["path"][:, i]
-            ax.plot(p[:, 0], p[:, 1], lw=0.9, alpha=0.8)
-            ax.plot(p[-1, 0], p[-1, 1], "k.", ms=4)
-            a, b = rec["src_pos"][i, 0], rec["src_pos"][i, 1]
-            ax.add_patch(plt.Circle(a, rec["contact_radius"], color="#2ca02c", alpha=0.35))
-            ax.add_patch(plt.Circle(b, rec["contact_radius"], color="#ff7f0e", alpha=0.35))
-        ax.set_xlim(0, L)
-        ax.set_ylim(0, L)
+            path, d = _normalize(rec, i)
+            ax.plot(path[:, 0], path[:, 1], lw=0.9, alpha=0.75)
+            ax.plot(path[-1, 0], path[-1, 1], "k.", ms=4)
+        ax.add_patch(plt.Circle((d, 0), rec["contact_radius"], color="#2ca02c", alpha=0.6))
+        ax.add_patch(plt.Circle((-d, 0), rec["contact_radius"], color="#ff7f0e", alpha=0.6))
+        ax.text(d, 2.4, "A", ha="center", color="#2ca02c", weight="bold")
+        ax.text(-d, 2.4, "B", ha="center", color="#ff7f0e", weight="bold")
+        ax.plot(0, 0, "k+", ms=8)
+        lim = rec["arena"] / 2
+        ax.set_xlim(-lim, lim)
+        ax.set_ylim(-lim, lim)
         ax.set_aspect("equal")
         ax.set_title(title, fontsize=9)
         ax.set_xticks([])
         ax.set_yticks([])
-    fig.suptitle("Seçim testi yolları (yeşil=A kaynağı, turuncu=B kaynağı; her yol ayrı deneme)", fontsize=9)
+    fig.suptitle("Seçim testi yolları (merkezden başlar, siyah nokta = ilk temas)", fontsize=9)
     fig.tight_layout()
     fig.savefig(out, dpi=140)
     plt.close(fig)
