@@ -103,16 +103,19 @@ class ConnectomeBrainConfig:
     kc_mbon_norm: str = "mbon"       # "mbon": her MBON'un toplam KC girdisi eşitlenir; "global": tek ölçek
     class_shuffle_seed: int = -1     # >=0: KONTROL — MBON yaklaş/kaçın sınıfları karıştırılır (bölme eşlemesi aynı kalır)
 
-    # öğrenme: DAN'a bağlı, bölmeye özgü, tek yönlü baskılanma (W <- W exp(-eta dt iz D))
+    # öğrenme: DAN'a bağlı, bölmeye özgü baskılanma (W <- W exp(-eta dt iz D)) ve
+    # karşı sınıf dopaminiyle geri yükleme (W <- W + (W0 - W) (1 - exp(-eta dt iz R)))
     eta: float = 5.0
+    restore: bool = True             # False: yalnız baskılanma (kontrol)
     tau_elig: float = 0.3
     elig_ref_rate: float = 50.0
     reward_target: float = 0.6
     recovery_rate: float = 0.0       # 1/sn; W'nin gerçek (başlangıç) değerine yavaş dönüşü (0 = kapalı)
 
-    # MBON -> değer okuması
+    # MBON -> değer okuması: V = (class_balance * yaklaş hızı - kaçın hızı) / valence_gain
     tau_valence: float = 0.15
-    valence_gain: float = 40.0
+    valence_gain: float = 10.0
+    class_balance: float = 1.0       # sınıf dengesi; eğitimsiz ağdan ölçülür (evre2.calibrate_balance)
     grn_max_rate: float = 150.0
     tau_taste: float = 0.06
 

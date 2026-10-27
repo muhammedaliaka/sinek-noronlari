@@ -131,10 +131,18 @@ def load(data_dir: str | Path = DEFAULT_DIR) -> MBData:
     return _CACHE[key]
 
 
-def connectome_config(data_dir: str | Path = DEFAULT_DIR, glom_per_odor: int = 8, odor_overlap: int = 2, **world_over):
-    """Evre 2 için `Config`: dünya kanal sayısı = verideki glomerül sayısı."""
-    from ..config import Config, ConnectomeBrainConfig, WorldConfig
+def connectome_config(data_dir: str | Path = DEFAULT_DIR, glom_per_odor: int = 8, odor_overlap: int = 2,
+                      odor_sigma: float = 6.0, odor_gain: float = 2.0, turn_gain: float = 40.0, **world_over):
+    """Evre 2 için `Config`: dünya kanal sayısı = verideki glomerül sayısı.
+
+    Evre 1'den farkları (geliştirme tohumlarında seçildi, docs/evre2_plan.md): daha dar koku bulutu ve daha
+    düşük doygunluk (iki koku arenada birbirine karışıp ayırt edilemez olmasın), daha yüksek dönüş kazancı
+    (değer ölçeği farklı), valence_gain=10.
+    """
+    from ..config import Config, ConnectomeBrainConfig, MotorConfig, WorldConfig
 
     d = load(data_dir)
-    world = WorldConfig(n_glom=d.n_glom, glom_per_odor=glom_per_odor, odor_overlap=odor_overlap, **world_over)
-    return Config(world=world, cbrain=ConnectomeBrainConfig(data_dir=str(data_dir)), brain_kind="connectome")
+    world = WorldConfig(n_glom=d.n_glom, glom_per_odor=glom_per_odor, odor_overlap=odor_overlap,
+                        odor_sigma=odor_sigma, odor_gain=odor_gain, **world_over)
+    return Config(world=world, cbrain=ConnectomeBrainConfig(data_dir=str(data_dir)),
+                  motor=MotorConfig(turn_gain=turn_gain), brain_kind="connectome")

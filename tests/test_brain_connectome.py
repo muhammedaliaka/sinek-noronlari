@@ -213,3 +213,37 @@ def test_class_shuffle_control_changes_only_the_readout(ccfg, pat):
         teach(b, ccfg, pat[0], 1.0)
         gain.append(probe(b, ccfg, pat[0]) - probe(b, ccfg, pat[1]))
     assert gain[0] > gain[1]            # gerçek bölme-sınıf yapısı karıştırılmışa göre daha iyi öğrenir
+
+
+def _class_loss(b, sel):
+    """Seçili MBON'ların KC girdisindeki bağıl kayıp (1 - W/W0 toplamı)."""
+    return float(1 - b.W.sum((0, 1))[sel].sum() / (b.W0.sum(0)[sel].sum() * b.R))
+
+
+def test_dopamine_sign_sets_depression_versus_restoration_per_compartment(ccfg):
+    """Kural birim testi: delta>0 (PAM) kaçın sınıfını baskılar, yaklaş sınıfını geri yükler; delta<0 tersi."""
+    b = fresh(ccfg, batch=1)
+    avoid = torch.as_tensor(b.data.mbon_u < -0.9)
+    appr = torch.as_tensor(b.data.mbon_u > 0.9)
+    half = 0.5 * b.W0
+    for delta, (avoid_dir, appr_dir) in ((+0.5, (-1, +1)), (-0.5, (+1, -1))):
+        b.W = half.expand(b.R, -1, -1).clone()
+        b.elig = torch.ones(b.R, b.n_kc)
+        b.last_delta = torch.full((b.R,), delta)
+        b._plasticity()
+        d_avoid = (b.W - half)[:, :, avoid].sum()
+        d_appr = (b.W - half)[:, :, appr].sum()
+        assert d_avoid * avoid_dir > 0 and d_appr * appr_dir > 0
+        assert (b.W >= 0).all() and (b.W <= b.W0 + 1e-6).all()
+
+
+def test_restoration_can_be_switched_off_for_a_pure_depression_control(ccfg, pat):
+    import copy
+
+    c2 = copy.deepcopy(ccfg)
+    c2.cbrain.restore = False
+    b = make_brain(c2, 2, 0)
+    teach(b, c2, pat[0], 1.0, secs=3.0)
+    before = b.W.clone()
+    teach(b, c2, pat[0], 0.0, secs=3.0)
+    assert (b.W <= before + 1e-7).all()              # yalnız baskılanma: hiçbir ağırlık artmaz

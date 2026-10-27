@@ -50,7 +50,7 @@ def audit(raw_dir: str, c: Connectome, thresholds=(10, 20, 50)) -> str:
     nt.index.name = "popülasyon"
     out += [_md(nt), "",
             "Beklenti: KC = asetilkolin, APL = GABA, DAN = dopamin, MBON karışık. DPM için gerçekte serotonin / GABA beklenir; "
-            "'dopamin' tahmini yanlıştır ve DPM bu nedenle simülasyona alınmaz. 3 PN'nin GABA tahmini inhibitör PN'lerle uyumludur ve işareti simülasyonda korunur.", ""]
+            "'dopamin' tahmini yanlıştır ve DPM bu nedenle simülasyona alınmaz. 3 PN'nin GABA tahmini (bazı PN'lerin GABAerjik olduğu bilinir; çelişmez) işaret olarak simülasyonda korunur, ama bu tahmin doğrulanmamıştır.", ""]
 
     out += ["## 3. PN → KC bağlantısı", ""]
     W = c.block("PN", "KC")
@@ -67,7 +67,10 @@ def audit(raw_dir: str, c: Connectome, thresholds=(10, 20, 50)) -> str:
     out += ["## 4. Yarımküre ataması: soma tarafı ↔ bağlantı", "",
             "MBON ve DAN'larda soma tarafı ile bağlantıya dayalı atama farklıdır; bağlantı esas alınmıştır:", ""]
     lr = n[(n.somaSide != "R") & n["pop"].isin(["PN", "MBON", "DAN"])]
-    out += [_md(lr.groupby(["pop", "type"]).size().rename("soma L").to_frame()), ""]
+    lt = lr.groupby(["pop", "type"]).size().rename("soma L").reset_index()
+    lt.index = lt["pop"] + " " + lt["type"]
+    lt.index.name = "tip"
+    out += [_md(lt[["soma L"]]), ""]
 
     out += [f"### Eşik duyarlılığı (`min_syn`)", "", "| min_syn | " + " | ".join(malecns.POP_ORDER) + " |",
             "|---|" + "|".join(["---:"] * len(malecns.POP_ORDER)) + "|"]

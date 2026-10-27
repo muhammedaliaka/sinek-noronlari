@@ -6,9 +6,10 @@ Devre (her yarımküre için; ikisi de AYNI sağ-yarımküre bağlantısını ku
     KC --[gerçek sinaps sayıları x plastik çarpan]--> MBON (LIF)
     DAN (hız birimi): bölme dopamini D_m = DAN->MBON sinaps payıyla ağırlıklı PAM/PPL1 etkinliği
 
-Öğrenme: W_km <- W_km * exp(-eta dt iz_k D_m)   (tek yönlü baskılanma; W <= gerçek başlangıç değeri)
+Öğrenme: W_km, [0, gerçek başlangıç değeri W0_km] aralığında kalır; bölmenin DAN'ı etkinken baskılanır
+  (W <- W exp(-eta dt iz_k D_m)), karşı sınıf DAN etkinken W0'a doğru geri yüklenir (bkz. `_plasticity`).
   PAM etkinliği = max(delta, 0) (ödül hatası), PPL1 etkinliği = max(-delta, 0) (ceza / ödül yokluğu).
-Değer: V = (yaklaş sınıfı MBON hızı - kaçın sınıfı MBON hızı) / kazanç.
+Değer: V = (class_balance * yaklaş sınıfı MBON hızı - kaçın sınıfı MBON hızı) / kazanç.
 
 Bağlantıdan gelen: sinaps sayıları (PN->KC, KC->APL, APL->KC, KC->MBON), PN glomerül ataması,
 nörotransmitter işareti (PN), bölme eşlemesi (DAN->MBON payı).
@@ -148,7 +149,7 @@ class ConnectomeBrain:
         self.taste += a_t * (cnt_grn / (c.n_grn * win) - self.taste)
         self.kc_frac = kc_spikes / n_sub
 
-        self.valence = (self.rate[:, 0] - self.rate[:, 1]) / c.valence_gain
+        self.valence = (c.class_balance * self.rate[:, 0] - self.rate[:, 1]) / c.valence_gain
         reward = ((self.taste[:, 0] - self.taste[:, 1]) / c.grn_max_rate).repeat_interleave(H)
         gate = (self.taste[:, 2] / c.grn_max_rate).repeat_interleave(H)
         self.last_delta = gate * (c.reward_target * reward - self.valence)
@@ -158,15 +159,29 @@ class ConnectomeBrain:
         return self.valence.view(self.B, H)
 
     def _plasticity(self) -> None:
+        """Bölmeye özgü iki yönlü kural (W, 0 ile gerçek başlangıç değeri W0 arasında kalır).
+
+        PAM etkinliği = max(delta, 0), PPL1 etkinliği = max(-delta, 0). Bir MBON'un aldığı DAN payı
+        (dan_mbon) bölmesini belirler:
+          baskılanma  D_m = kendi bölmesinin DAN'ı etkinken      (PAM bölmesinde ödül, PPL1 bölmesinde ceza/ödül yokluğu)
+          geri yükleme R_m = karşı sınıf DAN etkinken            (PAM bölmesinde ceza/yokluk, PPL1 bölmesinde ödül)
+        Böylece delta > 0 kaçın sınıfını baskılayıp yaklaş sınıfını eski haline getirir ve tersi (Rescorla-Wagner'in
+        sınırlı, iki yönlü karşılığı); tek yönlü sürüklenme ile bellek kapasitesi tükenmez.
+        """
         c = self.cfg
         eta = (c.eta * self.eta_scale).repeat_interleave(H)                    # (R,)
         pos, neg = self.last_delta.clamp(min=0), (-self.last_delta).clamp(min=0)
-        dan = torch.where(self.dan_is_ppl, neg.unsqueeze(1), pos.unsqueeze(1))  # (R, n_dan)
-        D = dan @ self.dan_mbon                                                # (R, n_mbon) bölme dopamini
-        rows = ((eta * D.sum(1)) > 0).nonzero().squeeze(1)
+        own = torch.where(self.dan_is_ppl, neg.unsqueeze(1), pos.unsqueeze(1))  # (R, n_dan)
+        D = own @ self.dan_mbon                                                # (R, n_mbon) baskılanma
+        R_ = (torch.where(self.dan_is_ppl, pos.unsqueeze(1), neg.unsqueeze(1)) @ self.dan_mbon) if c.restore else None
+        active = (D.sum(1) > 0) if R_ is None else ((D.sum(1) + R_.sum(1)) > 0)
+        rows = ((eta > 0) & active).nonzero().squeeze(1)
         if rows.numel():
-            k = (eta[rows] * self.dt_world).view(-1, 1, 1)
-            self.W[rows] *= torch.exp(-k * self.elig[rows].unsqueeze(2) * D[rows].unsqueeze(1))
+            k = (eta[rows] * self.dt_world).view(-1, 1, 1) * self.elig[rows].unsqueeze(2)    # (r, n_kc, 1)
+            W = self.W[rows] * torch.exp(-k * D[rows].unsqueeze(1))
+            if R_ is not None:
+                W = W + (self.W0 - W) * (1 - torch.exp(-k * R_[rows].unsqueeze(1)))
+            self.W[rows] = W
         if c.recovery_rate > 0:
             r = (c.recovery_rate * self.dt_world * (self.eta_scale > 0).float()).repeat_interleave(H)
             self.W += r.view(-1, 1, 1) * (self.W0 - self.W)
