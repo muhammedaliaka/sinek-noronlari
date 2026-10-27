@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+import torch
 
 from .. import checkpoint
 from ..config import Config
@@ -34,6 +35,8 @@ def build_parser(description: str | None = None, default_out: str = "results/evr
     ap.add_argument("--out", default=default_out)
     ap.add_argument("--no-plots", action="store_true")
     ap.add_argument("--quick", action="store_true", help="hızlı duman testi (anlamlı istatistik vermez)")
+    ap.add_argument("--swap-roles", action=argparse.BooleanOptionalAction, default=False,
+                    help="koşul başına canlıların ikinci yarısında A rolü koku 1 olur (koku kimliği dengelemesi, Evre 2b)")
     return ap
 
 
@@ -54,8 +57,14 @@ def main(argv=None) -> dict:
     return run(parse_args(argv), Config())
 
 
-def run(a: argparse.Namespace, cfg: Config, patterns=None, title: str = "Evre 1", extra: dict | None = None) -> dict:
-    """A -> C -> B hattı. `patterns`: koku desenleri (None: seed'ten); `extra`: sonuç dosyasına eklenir."""
+def run(a: argparse.Namespace, cfg: Config, patterns=None, title: str = "Evre 1", extra: dict | None = None,
+        evaluator=None, renderer=None, curve_key: str = "pref_A") -> dict:
+    """A -> C -> B hattı. `patterns`: koku desenleri (None: seed'ten); `extra`: sonuç dosyasına eklenir.
+
+    `evaluator(stages, a, conds, persisted)` ve `renderer(result)` Evre 2b için değiştirilebilir (varsayılan: Evre 1 ölçütleri).
+    """
+    evaluator = evaluator or evaluate
+    renderer = renderer or render_summary
     if a.quick:
         a.agents, a.episodes, a.reversal_episodes = 3, 2, 2
         a.episode_seconds, a.trials, a.test_seconds, a.test_every = 15.0, 2, 15.0, 1
@@ -65,6 +74,9 @@ def run(a: argparse.Namespace, cfg: Config, patterns=None, title: str = "Evre 1"
 
     conds = ["plastic"] * a.agents + ["frozen"] * a.agents + ["random"] * a.agents
     creature = P.build(cfg, conds, seed=a.seed, device=a.device, patterns=patterns)
+    swap = _swap_mask(a.agents, 3, a.swap_roles)
+    if a.swap_roles:
+        creature.world.set_swap(torch.as_tensor(swap))
     test_seed = 12345 + a.seed
     n_neurons = creature.brain.n_neurons()
     log(f"canlı başına {n_neurons} nöron; {len(conds)} canlı ({a.agents} x 3 koşul), cihaz={a.device}", t0)
@@ -87,6 +99,7 @@ def run(a: argparse.Namespace, cfg: Config, patterns=None, title: str = "Evre 1"
         for k in range(1, n_eps + 1):
             tl = P.train(creature, 1, a.episode_seconds, rewards)
             c = tl.contact_array()[0]
+            c = np.where(swap[:, None], c[:, ::-1], c)    # koku -> rol (A/B)
             for cond in P.CONDITIONS:
                 contacts_by_cond[cond].append(c[cond_arr == cond].mean(0))
             ep = first_ep + k
@@ -123,23 +136,24 @@ def run(a: argparse.Namespace, cfg: Config, patterns=None, title: str = "Evre 1"
     traj_after_b = P.record_trajectories(creature, _pick(conds, "plastic", 6), a.test_seconds)
 
     # ---- ölçütler -------------------------------------------------------------
-    verdict = evaluate(stages, a, conds, identical and w_equal)
+    verdict = evaluator(stages, a, conds, identical and w_equal)
     result = {
         "args": vars(a), "config": cfg.to_dict(), "neurons_per_creature": n_neurons,
         "stages": stages, "verdict": verdict,
         "contacts": {k: np.array(v).tolist() for k, v in contacts_by_cond.items()},
         "persistence": {"weights_identical": w_equal, "test_identical": identical},
+        "swap": swap.astype(int).tolist(),
         "wall_seconds": time.time() - t0,
         "title": title, **(extra or {}),
     }
     (out / "results.json").write_text(json.dumps(result, indent=1, ensure_ascii=False))
-    (out / "summary.md").write_text(render_summary(result))
+    (out / "summary.md").write_text(renderer(result))
     if not a.no_plots:
         try:
             from . import plots
 
             curve = [{"episode": s["episode"], "summary": s["summary"]} for s in stages]
-            plots.learning_curve(curve, rev_start, out / "ogrenme_egrisi.png")
+            plots.learning_curve(curve, rev_start, out / "ogrenme_egrisi.png", key=curve_key)
             plots.contacts_curve({k: np.array(v) for k, v in contacts_by_cond.items()}, rev_start, out / "temaslar.png")
             plots.trajectories({"A eğitiminden sonra": traj_after_a, "ödül tersine çevrildikten sonra": traj_after_b},
                                out / "yollar.png")
@@ -149,6 +163,15 @@ def run(a: argparse.Namespace, cfg: Config, patterns=None, title: str = "Evre 1"
     for k, v in verdict.items():
         log(f"  {'PASS' if v['pass'] else 'FAIL'}  {k}: {v['detail']}", t0)
     return result
+
+
+def _swap_mask(n_agents: int, n_cond: int, swap_roles: bool) -> np.ndarray:
+    """Koşul başına canlıların ilk yarısı normal, ikinci yarısı A rolü = koku 1 (rol-dengeli tasarım)."""
+    m = np.zeros(n_agents * n_cond, dtype=bool)
+    if swap_roles:
+        for c in range(n_cond):
+            m[c * n_agents + n_agents // 2:(c + 1) * n_agents] = True
+    return m
 
 
 def _pick(conds, name, n):

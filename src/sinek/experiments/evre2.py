@@ -135,8 +135,14 @@ def _git_commit() -> str | None:
         return None
 
 
-def main(argv=None) -> dict:
-    ap = evre1.build_parser(description=__doc__, default_out="results/evre2")
+# Evre 2b (docs/evre2b_plan.md) hareket okuması: Evre 2 v1'den farkı; geliştirme tohumlarında seçildi.
+V2_SET = []
+
+
+def main(argv=None, v2: bool = False) -> dict:
+    ap = evre1.build_parser(description=__doc__, default_out="results/evre2b" if v2 else "results/evre2")
+    if v2:   # Evre 2b varsayılanları (ön-kayıt: docs/evre2b_plan.md)
+        ap.set_defaults(agents=24, episodes=12, reversal_episodes=12, test_every=6, trials=8, swap_roles=True)
     ap.add_argument("--calib-candidates", type=int, default=40, help="aday koku çifti sayısı")
     ap.add_argument("--pattern-seed", type=int, default=None,
                     help="koku çifti aramasını atla, bu tohumun desenini kullan (kontrol koşuları ana koşuyla aynı çifti kullanır)")
@@ -148,7 +154,7 @@ def main(argv=None) -> dict:
     if a.threads:
         torch.set_num_threads(a.threads)
     cfg = mbmodel.connectome_config(a.data_dir)
-    for item in a.set:
+    for item in (V2_SET if v2 else []) + a.set:
         apply_override(cfg, item)
     t0 = time.time()
     balance = calibrate_balance(cfg, device=a.device)
@@ -170,6 +176,12 @@ def main(argv=None) -> dict:
     d = mbmodel.load(cfg.cbrain.data_dir)
     extra = {"git_commit": _git_commit(), "calibration": info, "balance": balance, "connectome": d.summary,
              "connectome_meta": __import__("json").loads((mbmodel.resolve_dir(cfg.cbrain.data_dir) / "meta.json").read_text())}
+    if v2:
+        from . import evre2b
+
+        extra["protocol"] = "evre2b"
+        return evre1.run(a, cfg, patterns=patterns, title="Evre 2b (gerçek mantar cismi, artırılmış ölçüt gücü)", extra=extra,
+                         evaluator=evre2b.evaluate2, renderer=evre2b.render_summary2, curve_key="pooled_A")
     return evre1.run(a, cfg, patterns=patterns, title="Evre 2 (gerçek mantar cismi)", extra=extra)
 
 

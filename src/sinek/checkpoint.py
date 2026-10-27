@@ -36,6 +36,7 @@ def save(creature: Creature, path: str | Path, extra: dict | None = None) -> Pat
         path,
         **arrays,
         patterns=creature.world.patterns.cpu().numpy(),
+        swap=creature.world.swap.cpu().numpy(),
         eta_scale=creature.brain.eta_scale.cpu().numpy(),
         turn_gain=creature.turn_gain.cpu().numpy(),
         meta=np.frombuffer(json.dumps(meta).encode("utf-8"), dtype=np.uint8),
@@ -55,8 +56,10 @@ def load(path: str | Path, device: str = "cpu", world_seed: int | None = None) -
     patterns = torch.from_numpy(z["patterns"]) if "patterns" in z.files else odor_patterns(cfg.world, seed)
     world = World(cfg.world, B, seed if world_seed is None else world_seed, device, patterns=patterns)
     brain = make_brain(cfg, B, seed, device)
-    reserved = {"meta", "eta_scale", "turn_gain", "patterns"}
+    reserved = {"meta", "eta_scale", "turn_gain", "patterns", "swap"}
     brain.load_state_dict({**{k: torch.from_numpy(z[k]) for k in z.files if k not in reserved}, "seed": seed})
+    if "swap" in z.files:
+        world.set_swap(torch.from_numpy(z["swap"]))
     creature = Creature(cfg, brain, world)
     brain.eta_scale = torch.from_numpy(z["eta_scale"]).to(world.device)
     creature.turn_gain = torch.from_numpy(z["turn_gain"]).to(world.device)

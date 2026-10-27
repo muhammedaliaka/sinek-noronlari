@@ -51,6 +51,9 @@ class World:
         # (B, n_odors): A ödüllü, B ödülsüz varsayılan
         self.reward_by_odor = torch.zeros(batch, cfg.n_odors, device=self.device)
         self.reward_by_odor[:, 0] = 1.0
+        # rol dengelemesi (Evre 2b): swap olan canlıda "A rolü" koku 1'dir (A = önce ödüllenen koku). Varsayılan: hiçbiri.
+        self.swap = torch.zeros(batch, dtype=torch.bool, device=self.device)
+        self._rewards = (1.0, 0.0)
         self.consumable = True
         self.mode = "forage"
         self._alloc(n_src=cfg.n_odors * cfg.n_sources_per_odor)
@@ -194,5 +197,14 @@ class World:
 
     # ---------------------------------------------------------------- yardımcı
     def set_rewards(self, reward_a: float, reward_b: float) -> None:
-        self.reward_by_odor[:, 0] = reward_a
-        self.reward_by_odor[:, 1] = reward_b
+        """Ödüller ROL başınadır (A, B). `swap` olan canlılarda A rolü koku 1, B rolü koku 0'dır."""
+        self._rewards = (float(reward_a), float(reward_b))
+        ra = torch.full((self.B,), float(reward_a), device=self.device)
+        rb = torch.full((self.B,), float(reward_b), device=self.device)
+        self.reward_by_odor[:, 0] = torch.where(self.swap, rb, ra)
+        self.reward_by_odor[:, 1] = torch.where(self.swap, ra, rb)
+
+    def set_swap(self, swap: torch.Tensor) -> None:
+        """Rol dengelemesini ayarla ve mevcut ödülleri yeni eşlemeyle yeniden uygula."""
+        self.swap = torch.as_tensor(swap, dtype=torch.bool, device=self.device).clone()
+        self.set_rewards(*self._rewards)

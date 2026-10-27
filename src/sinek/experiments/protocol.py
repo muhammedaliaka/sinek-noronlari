@@ -18,6 +18,7 @@ from ..agent import Creature
 from ..brains import make_brain
 from ..config import Config
 from ..world import World
+from .stats import cluster_bootstrap_ci
 
 CONDITIONS = ("plastic", "frozen", "random")
 
@@ -104,6 +105,7 @@ def make_test_creature(creature: Creature, agents: torch.Tensor, seed: int) -> C
         creature.cfg.world, len(idx), seed, str(creature.world.device),
         patterns=creature.world.patterns,
     )
+    world.swap = creature.world.swap[idx.to(creature.world.swap.device)].clone()   # rol dengelemesi taşınır
     test = Creature(creature.cfg, creature.brain.select(idx), world)
     test.turn_gain = creature.turn_gain[idx.to(creature.turn_gain.device)].clone()
     return test
@@ -124,6 +126,7 @@ def choice_test(
     test.run(seconds, learn=False, stop_when_done=True)
 
     ch = world.choice.view(B, trials)
+    ch = torch.where(ch >= 0, ch ^ world.swap.view(B, trials).long(), ch)   # koku -> rol (A/B)
     steps = world.choice_step.view(B, trials).float() * cfg.world.dt
     n_a = (ch == 0).sum(1).cpu().numpy()
     n_b = (ch == 1).sum(1).cpu().numpy()
@@ -166,10 +169,14 @@ def summarize(res: ChoiceResult, conditions: Sequence[str]) -> dict:
         m = cond == name
         pref = res.preference[m]
         mean, lo, hi = bootstrap_ci(pref)
+        pm, plo, phi = cluster_bootstrap_ci(res.n_a[m], res.n_b[m])
         out[name] = {
             "n_agents": int(m.sum()),
             "pref_A_mean": mean,
             "pref_A_ci95": [lo, hi],
+            "pooled_A_mean": pm,                      # Evre 2b: seçim sayısı ağırlıklı, canlı-düzeyi bootstrap
+            "pooled_A_ci95": [plo, phi],
+            "n_choices": int((res.n_a[m] + res.n_b[m]).sum()),
             "choice_rate": float(res.choice_rate[m].mean()),
             "latency_s": float(np.nanmean(res.latency[m])) if np.any(~np.isnan(res.latency[m])) else float("nan"),
             "pref_A_per_agent": [None if math.isnan(x) else float(x) for x in pref],

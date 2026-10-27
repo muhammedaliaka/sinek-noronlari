@@ -22,8 +22,11 @@ def _plt():
     return plt
 
 
-def learning_curve(stages: list[dict], reversal_start: int | None, out: Path) -> Path:
-    """stages: [{'episode': int, 'summary': {cond: {...}}}] zaman sırasıyla."""
+def learning_curve(stages: list[dict], reversal_start: int | None, out: Path, key: str = "pref_A") -> Path:
+    """stages: [{'episode': int, 'summary': {cond: {...}}}] zaman sırasıyla.
+
+    key: "pref_A" (canlı başına tercihin ortalaması, Evre 1/2 v1) | "pooled_A" (havuzlanmış oran + küme bootstrap GA, Evre 2b).
+    """
     plt = _plt()
     fig, ax = plt.subplots(figsize=(7, 4))
     x = [s["episode"] for s in stages]
@@ -31,9 +34,9 @@ def learning_curve(stages: list[dict], reversal_start: int | None, out: Path) ->
         ys, lo, hi = [], [], []
         for s in stages:
             d = s["summary"][cond]
-            ys.append(d["pref_A_mean"])
-            lo.append(d["pref_A_ci95"][0])
-            hi.append(d["pref_A_ci95"][1])
+            ys.append(d[f"{key}_mean"])
+            lo.append(d[f"{key}_ci95"][0])
+            hi.append(d[f"{key}_ci95"][1])
         ys, lo, hi = map(np.array, (ys, lo, hi))
         ax.plot(x, ys, "-o", color=COLORS[cond], label=LABELS[cond], ms=4)
         ax.fill_between(x, lo, hi, color=COLORS[cond], alpha=0.15)
@@ -44,7 +47,7 @@ def learning_curve(stages: list[dict], reversal_start: int | None, out: Path) ->
     ax.set_ylim(0, 1)
     ax.set_xlabel("Eğitim bölümü")
     ax.set_ylabel("A tercih oranı  A/(A+B)")
-    ax.set_title("Seçim testinde A tercihi (ortalama ve %95 GA)")
+    ax.set_title("Seçim testinde A tercihi (" + ("havuzlanmış oran" if key == "pooled_A" else "ortalama") + " ve %95 GA)")
     ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3, fontsize=8, frameon=False)
     fig.text(0.01, 0.01, "Not: 'öğrenme kapalı' ve 'rastgele' koşulları değişmez, aynı düzenlerle test edildikleri için çizgileri düzdür.",
              fontsize=6.5, color="#555")
