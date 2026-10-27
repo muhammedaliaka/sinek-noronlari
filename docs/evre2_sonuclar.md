@@ -178,7 +178,9 @@ Evre 2'de eğitilmiş tercih Evre 1 kadar yüksek, ama **ölçüt gücü açıs�
 7. **Eğitimsiz ağ az seçim yapıyor** (kaynağa nadiren ulaşıyor); bu hem ölçüm gücünü düşürüyor hem de öğrenmenin bir kısmının "ağın harekete geçmesi" olarak görünmesine yol açabilir (seçim oranı 0,17 → 0,78).
 8. **Aşamalar bağımsız örneklem değil** ve canlılar aynı bağlantının tekrarlarıdır; GA'lar canlılar-arası gürültüyü ölçer.
 9. **GPU yolu test edilmedi**; tüm koşular CPU'da yapıldı.
-10. **Birebir tekrarlanabilirlik:** kaydet/yükle testi birebir doğrulandı (C). Tüm koşunun başka makine veya farklı iş parçacığı sayısıyla birebir aynı sayıları verdiği doğrulanmadı.
+10. **Birebir tekrarlanabilirlik:** kaydet/yükle testi birebir doğrulandı (C). Ayrıca (kazara) tohum 20 koşusu, ablasyon bayrağının yanlış ayrıştırılması yüzünden (aşağıdaki "Bir hata" bölümü) aynı yapılandırmayla
+    `--threads 4` ve 3 tersine çevirme bölümüyle yeniden koşuldu: koku çifti, sınıf dengesi, 6 aşamanın tüm seçim sayıları ve ilk 15 bölümün temas sayıları ana koşuyla (`--threads 2`) **birebir aynı** çıktı.
+    Bu **aynı makinede** (aynı CPU, PyTorch 2.14.1) doğrulandı; başka makine / donanımda doğrulanmadı.
 
 ## Yeniden üretme
 
