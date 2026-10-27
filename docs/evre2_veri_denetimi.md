@@ -28,7 +28,7 @@ Kenar: 468206, toplam sinaps: 1485307. Soma tarafı L olan nöronlar bağlantıy
 | MBON | 25 | 0 | 11 | 12 |
 | DAN | 0 | 161 | 0 | 0 |
 
-Beklenti: KC = asetilkolin, APL = GABA, DAN = dopamin, MBON karışık. DPM için gerçekte serotonin / GABA beklenir; 'dopamin' tahmini yanlıştır ve DPM bu nedenle simülasyona alınmaz. 3 PN'nin GABA tahmini inhibitör PN'lerle uyumludur ve işareti simülasyonda korunur.
+Beklenti: KC = asetilkolin, APL = GABA, DAN = dopamin, MBON karışık. DPM için gerçekte serotonin / GABA beklenir; 'dopamin' tahmini yanlıştır ve DPM bu nedenle simülasyona alınmaz. 3 PN'nin GABA tahmini (bazı PN'lerin GABAerjik olduğu bilinir; çelişmez) işaret olarak simülasyonda korunur, ama bu tahmin doğrulanmamıştır.
 
 ## 3. PN → KC bağlantısı
 
@@ -41,33 +41,33 @@ Beklenti: KC = asetilkolin, APL = GABA, DAN = dopamin, MBON karışık. DPM içi
 
 MBON ve DAN'larda soma tarafı ile bağlantıya dayalı atama farklıdır; bağlantı esas alınmıştır:
 
-|  | soma L |
+| tip | soma L |
 |---|---|
-| ('DAN', 'PAM03') | 2 |
-| ('DAN', 'PAM09') | 3 |
-| ('DAN', 'PAM10') | 5 |
-| ('DAN', 'PAM11') | 7 |
-| ('DAN', 'PAM12') | 1 |
-| ('DAN', 'PAM13') | 4 |
-| ('DAN', 'PAM14') | 1 |
-| ('DAN', 'PPL101') | 1 |
-| ('DAN', 'PPL102') | 1 |
-| ('DAN', 'PPL103') | 1 |
-| ('DAN', 'PPL106') | 1 |
-| ('DAN', 'PPL107') | 1 |
-| ('DAN', 'PPL108') | 1 |
-| ('MBON', 'MBON03') | 1 |
-| ('MBON', 'MBON04') | 1 |
-| ('MBON', 'MBON05') | 1 |
-| ('MBON', 'MBON06') | 1 |
-| ('MBON', 'MBON25') | 1 |
-| ('MBON', 'MBON25-like') | 2 |
-| ('MBON', 'MBON34') | 1 |
-| ('PN', 'VL1_ilPN') | 1 |
-| ('PN', 'VP1d_il2PN') | 1 |
-| ('PN', 'VP1m+VP5_ilPN') | 1 |
-| ('PN', 'VP3+VP1l_ivPN') | 1 |
-| ('PN', 'V_ilPN') | 1 |
+| DAN PAM03 | 2 |
+| DAN PAM09 | 3 |
+| DAN PAM10 | 5 |
+| DAN PAM11 | 7 |
+| DAN PAM12 | 1 |
+| DAN PAM13 | 4 |
+| DAN PAM14 | 1 |
+| DAN PPL101 | 1 |
+| DAN PPL102 | 1 |
+| DAN PPL103 | 1 |
+| DAN PPL106 | 1 |
+| DAN PPL107 | 1 |
+| DAN PPL108 | 1 |
+| MBON MBON03 | 1 |
+| MBON MBON04 | 1 |
+| MBON MBON05 | 1 |
+| MBON MBON06 | 1 |
+| MBON MBON25 | 1 |
+| MBON MBON25-like | 2 |
+| MBON MBON34 | 1 |
+| PN VL1_ilPN | 1 |
+| PN VP1d_il2PN | 1 |
+| PN VP1m+VP5_ilPN | 1 |
+| PN VP3+VP1l_ivPN | 1 |
+| PN V_ilPN | 1 |
 
 ### Eşik duyarlılığı (`min_syn`)
 
