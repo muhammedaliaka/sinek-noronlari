@@ -1,12 +1,12 @@
 # Sinek Nöronları — koku/ödül öğrenen dijital canlı
 
 Sinek beyninden esinlenen, **algılayan, hareket eden, deneyimle öğrenen ve öğrendiğini koruyan** sanal bir canlı.
-Bu depo uzun vadeli bir projenin **Evre 1** çıktısıdır. Proje bağlamı ve hedefler: [`docs/proje_raporu.md`](docs/proje_raporu.md).
+Bu depo uzun vadeli bir projenin **Evre 1 ve Evre 2** çıktısıdır. Proje bağlamı ve hedefler: [`docs/proje_raporu.md`](docs/proje_raporu.md).
 
-> **Dürüstlük notu:** Evre 1'de gerçek sinek bağlantı verisi (FlyWire / MaleCNS) **henüz kullanılmıyor**.
-> Ağ, sineğin mantar cismi (*mushroom body*) mimarisinden esinlenen sentetik bir devredir. Öğrenmenin
-> çalıştığını kontrollü deneylerle kanıtlamak için bilinçli olarak küçük ve tam kontrol edilebilir tutuldu.
-> Gerçek bağlantı verisi Evre 2'dir. Bu sonuçlar gerçek sinek davranışı hakkında iddia taşımaz.
+> **Dürüstlük notu:** Evre 1'de ağ, sineğin mantar cismi (*mushroom body*) mimarisinden esinlenen **sentetik** bir devredir.
+> Evre 2'de aynı deney, **MaleCNS v1.0 bağlantı haritasından** çıkarılan gerçek mantar cismi alt ağıyla tekrarlandı
+> (aşağıda). Hiçbiri gerçek sinek davranışı hakkında iddia taşımaz: ortam sanal, hareket kuralı elle yazılmış,
+> öğrenme kuralı ve birçok parametre model varsayımıdır. **Evre 2'nin önceden yazılmış ölçütleri tam karşılanmadı** (tohum 20: 5/6, tohum 21: 4/6).
 
 ## Ne yapıyor?
 
@@ -107,17 +107,57 @@ Başarı ölçütleri **sonuçlar görülmeden önce** sabitlendi; betik bunlar�
 Ayrıntılar, grafikler, sınırlamalar ve **ilk iki geçersiz koşuya yol açan bir hatanın hikâyesi**:
 [`docs/evre1_sonuclar.md`](docs/evre1_sonuclar.md). Bu sayılar sentetik devre ve sanal dünya içindir.
 
+## Evre 2: gerçek bağlantı haritasıyla mantar cismi
+
+Aynı dünya, hareket kuralı ve deney hattı; beyin ise **MaleCNS v1.0** (erkek *Drosophila* beyni, sağ yarımküre mantar cismi) bağlantı
+haritasından çıkarıldı: PN 123, KC 2 045, APL 1, MBON 48, DAN 161 — canlı başına **4 780 nöron**. PN→KC, KC→APL→KC ve KC→MBON sinaps
+sayıları ve MBON'un hangi DAN bölmesinden dopamin aldığı **veriden** gelir. Sinaps sayısı → ağırlık dönüşümü, MBON "yaklaş/kaçın" sınıfının DAN bölme payından türetilmesi,
+tat → dopamin kuralı ve hareket **varsayım/modeldir** ([`docs/evre2_plan.md`](docs/evre2_plan.md) §2: neyin veri, neyin varsayım olduğu tablosu).
+
+Plan ve ölçütler koşulardan **önce** yazılıp commit edildi. Doğrulayıcı koşular iki yeni tohumla (geliştirmede kullanılmayan 20 ve 21), koşul başına 16 canlıyla yapıldı:
+
+| | Tohum 20 | Tohum 21 |
+|---|---|---|
+| A tercihi, eğitimsiz (`plastic`) | 0,56 [0,31; 0,81] | 1,00 [1,00; 1,00] (**4 seçim**) |
+| A tercihi, A eğitiminden sonra (`plastic`) | **0,92** [0,85; 0,98] | **0,90** [0,80; 0,98] |
+| A tercihi, `frozen` / `random` kontrol | 0,67 / 0,47 | 0,61 / 0,54 |
+| A tercihi, ödül B'ye taşındıktan sonra | **0,27** [0,10; 0,47] | **0,14** [0,07; 0,23] |
+| Yeniden yüklenen canlı birebir aynı | evet | evet |
+| Ölçütler | **5 / 6** (A2 FAIL) | **4 / 6** (A2, A3 FAIL) |
+
+* **Öğrenme ve tersine çevirme büyük ve tutarlı**, bellek birebir korundu.
+* **A2** (`plastic` > `frozen`, p < 0,01) iki koşuda da kaldı (p = 0,063 / 0,068). **A3** (naif tercih yok) tohum 21'de kaldı: naif ağ nadiren kaynağa ulaştığından
+  (64 denemede 4–11 seçim) bu iki ölçüt çok az gözleme dayanıyor. Bu açıklama koşulardan **sonra** yapıldı; ölçüt hükmü değiştirilmedi.
+* Sınıf etiketlerini karıştırma kontrolü (E1) ön-kayıtlı ölçütü formel olarak geçti, ama karıştırılmış ağlar neredeyse hiç seçim yapmadığı için kanıt zayıf.
+
+Tam sonuçlar, grafikler, post-hoc analizler ve sınırlamalar: [`docs/evre2_sonuclar.md`](docs/evre2_sonuclar.md) ·
+ek analiz: [`docs/evre2_ek_analiz.md`](docs/evre2_ek_analiz.md) · veri denetimi: [`docs/evre2_veri_denetimi.md`](docs/evre2_veri_denetimi.md).
+
+```powershell
+# veri (bir kez; ~1 GB indirme, boyut + md5 doğrulanır). Çıkarılan alt ağ depoda hazır: data/processed/malecns_v1.0_R
+python -m sinek.connectome.fetch
+python -m sinek.connectome.malecns
+# doğrulayıcı koşu (~80 dk, CPU)
+python -m sinek.experiments.evre2 --agents 16 --episodes 12 --reversal-episodes 12 --test-every 3 --trials 4 --seed 20 --threads 2 --out results\evre2_s20
+# duman testi (~5 dk; yalnızca boru hattı çalışıyor mu diye bakar, istatistik vermez)
+python -m sinek.experiments.evre2 --quick --out results\evre2_quick
+```
+
+**Veri atfı:** MaleCNS connectome (FlyEM / HHMI Janelia, Cambridge Zoology, MRC LMB, Google Research), CC BY 4.0; ayrıntı [`data/README.md`](data/README.md).
+Nörotransmitter değerleri sınıflandırıcı tahminidir, ölçüm değildir.
+
 ## Yol haritası
 
 | Evre | İçerik | Durum |
 |---|---|---|
-| 1 | Sentetik mantar cismi devresi, 2B dünya, koku/ödül öğrenme, tersine çevirme, bellek | **bu depo** |
-| 2 | Gerçek bağlantı verisi (FlyWire / MaleCNS): lisans ve sürüm doğrulaması, seyrek motor, mantar cismi alt ağı | sırada |
+| 1 | Sentetik mantar cismi devresi, 2B dünya, koku/ödül öğrenme, tersine çevirme, bellek | **tamam** (6/6 ve 6/6) |
+| 2 | Gerçek bağlantı verisi (MaleCNS v1.0): lisans ve sürüm doğrulaması, mantar cismi alt ağı, koku/ödül öğrenme | **yapıldı, ölçütler kısmen karşılandı** (5/6 ve 4/6); ölçüm gücü sorunu açık |
 | 3 | Açlık/enerji ihtiyaçları, serbest keşif; seçilmiş devre birleştirme; 10–20 bin özel nöron + ablasyon deneyleri | planlı |
 | 4 | FlyGym ile 3B beden | planlı |
 
-Evre 2'de `MushroomBodyBrain` arayüzünün (`step(glom, taste, touch, learn)` → değer, `state_dict`) arkasına
-genel seyrek bir motor konacak. Dünya, ajan ve deney kodu değişmeden kalacak şekilde tasarlandı.
+`make_brain(cfg, ...)` (`src/sinek/brains.py`) sentetik (`MushroomBodyBrain`) ve bağlantı-tabanlı (`ConnectomeBrain`) beyinleri aynı arayüzün
+(`step(glom, taste, touch, learn)` → değer, `state_dict`) arkasında verir; dünya, ajan ve deney kodu iki evrede de aynıdır.
+Açık kalan: Evre 2'de ölçüt gücünü artırmak (eğitimsiz ağın az seçim yapması), MBON→DAN geri beslemesi ve diğer MB alt ağları.
 
 ## Yapı
 
@@ -125,10 +165,14 @@ genel seyrek bir motor konacak. Dünya, ajan ve deney kodu değişmeden kalacak 
 src/sinek/
   config.py        tüm parametreler
   world.py         toplu 2B dünya
-  brain.py         spiking mantar cismi + öğrenme
+  brain.py         sentetik spiking mantar cismi + öğrenme (Evre 1)
+  brain_connectome.py  gerçek bağlantıdan mantar cismi + iki yönlü sınırlı plastisite (Evre 2)
+  brains.py        beyin fabrikası
   agent.py         beyin + hareket (şeffaflık notu başlıkta)
-  checkpoint.py    bellek kaydet/yükle
-  experiments/     protocol.py (eğitim, test, istatistik), evre1.py (hat), plots.py
+  checkpoint.py    bellek kaydet/yükle (iki beyin türü için)
+  connectome/      MaleCNS indirme (doğrulamalı), alt ağ çıkarma, model verisi, denetim raporu
+  experiments/     protocol.py (eğitim, test, istatistik), evre1.py, evre2.py, evre2_posthoc.py, plots.py
+data/              çıkarılan mantar cismi alt ağı (processed/), ham veri indirilir (raw/, gitignore)
 tests/             birim ve davranış testleri
-docs/              proje raporu, sonuçlar
+docs/              proje raporu, plan, sonuçlar, veri denetimi
 ```
