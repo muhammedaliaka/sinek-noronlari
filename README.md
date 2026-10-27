@@ -93,7 +93,19 @@ Başarı ölçütleri **sonuçlar görülmeden önce** sabitlendi; betik bunlar�
 | B1 | Tersine çevirmeden sonra A-tercihi anlamlı düşer (p < 0.01) |
 | B2 | Tersine çevirmeden sonra B tercih edilir (A-tercihi GA üst sınırı < 0.5) |
 
-Gerçek koşunun sayıları: [`docs/evre1_sonuclar.md`](docs/evre1_sonuclar.md).
+### Sonuçlar (iki bağımsız tohum, koşul başına 20 canlı)
+
+| | Tohum 10 | Tohum 11 |
+|---|---|---|
+| A tercihi, eğitimsiz (`plastic`) | 0,53 | 0,51 |
+| A tercihi, A eğitiminden sonra (`plastic`) | **0,74** [0,64; 0,84] | **0,88** [0,80; 0,95] |
+| A tercihi, `frozen` / `random` kontrol | 0,50 / 0,46 | 0,53 / 0,51 |
+| A tercihi, ödül B'ye taşındıktan sonra | **0,10** [0,03; 0,17] | **0,16** [0,07; 0,27] |
+| Yeniden yüklenen canlı birebir aynı | evet | evet |
+| Ölçütler | 6 / 6 PASS | 6 / 6 PASS |
+
+Ayrıntılar, grafikler, sınırlamalar ve **ilk iki geçersiz koşuya yol açan bir hatanın hikâyesi**:
+[`docs/evre1_sonuclar.md`](docs/evre1_sonuclar.md). Bu sayılar sentetik devre ve sanal dünya içindir.
 
 ## Yol haritası
 
