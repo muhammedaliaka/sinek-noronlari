@@ -1,7 +1,7 @@
 """Kaydet / yükle: öğrenilmiş sinaptik durum (bellek) diske yazılır.
 
-Bellek = plastik KC->MBON ağırlıkları. Dinamik durum (membran gerilimleri, izler)
-kasıtlı olarak kaydedilmez: canlı yeniden başladığında bu değişkenler sıfırdan
+Bellek = plastik KC->MBON ağırlıkları (`brain.state_dict()` neyse o yazılır) ve canlının
+koku desenleri. Dinamik durum (membran gerilimleri, izler) kasıtlı olarak kaydedilmez: canlı yeniden başladığında bu değişkenler sıfırdan
 başlar; geriye kalan şey gerçekten öğrenilmiş sinaptik bilgidir.
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import numpy as np
 import torch
 
 from .agent import Creature
-from .brain import MushroomBodyBrain
+from .brains import make_brain
 from .config import Config
 from .world import World, odor_patterns
 
@@ -30,10 +30,12 @@ def save(creature: Creature, path: str | Path, extra: dict | None = None) -> Pat
         "seed": st["seed"],
         "extra": extra or {},
     }
+    arrays = {k: np.asarray(v) for k, v in st.items() if k != "seed"}
+    arrays["W"] = arrays["W"].astype(np.float32)
     np.savez_compressed(
         path,
-        W=st["W"].numpy().astype(np.float32),
-        kc_inputs=st["kc_inputs"].numpy(),
+        **arrays,
+        patterns=creature.world.patterns.cpu().numpy(),
         eta_scale=creature.brain.eta_scale.cpu().numpy(),
         turn_gain=creature.turn_gain.cpu().numpy(),
         meta=np.frombuffer(json.dumps(meta).encode("utf-8"), dtype=np.uint8),
@@ -48,13 +50,13 @@ def load(path: str | Path, device: str = "cpu", world_seed: int | None = None) -
     if meta["format"] != FORMAT_VERSION:
         raise ValueError(f"Desteklenmeyen checkpoint sürümü: {meta['format']}")
     cfg = Config.from_dict(meta["config"])
-    W = torch.from_numpy(z["W"])
-    B = W.shape[0]
+    B = z["W"].shape[0]
     seed = meta["seed"]
-    world = World(cfg.world, B, seed if world_seed is None else world_seed, device,
-                  patterns=odor_patterns(cfg.world, seed))
-    brain = MushroomBodyBrain(cfg.brain, B, seed, device, cfg.world.dt, cfg.substeps)
-    brain.load_state_dict({"W": W, "kc_inputs": torch.from_numpy(z["kc_inputs"]), "seed": seed})
+    patterns = torch.from_numpy(z["patterns"]) if "patterns" in z.files else odor_patterns(cfg.world, seed)
+    world = World(cfg.world, B, seed if world_seed is None else world_seed, device, patterns=patterns)
+    brain = make_brain(cfg, B, seed, device)
+    reserved = {"meta", "eta_scale", "turn_gain", "patterns"}
+    brain.load_state_dict({**{k: torch.from_numpy(z[k]) for k in z.files if k not in reserved}, "seed": seed})
     creature = Creature(cfg, brain, world)
     brain.eta_scale = torch.from_numpy(z["eta_scale"]).to(world.device)
     creature.turn_gain = torch.from_numpy(z["turn_gain"]).to(world.device)

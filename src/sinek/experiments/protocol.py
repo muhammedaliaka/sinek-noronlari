@@ -15,7 +15,7 @@ import numpy as np
 import torch
 
 from ..agent import Creature
-from ..brain import MushroomBodyBrain
+from ..brains import make_brain
 from ..config import Config
 from ..world import World
 
@@ -23,12 +23,12 @@ CONDITIONS = ("plastic", "frozen", "random")
 
 
 def build(
-    cfg: Config, conditions: Sequence[str], seed: int, device: str = "cpu"
+    cfg: Config, conditions: Sequence[str], seed: int, device: str = "cpu", patterns=None
 ) -> Creature:
-    """`conditions`: eleman başına koşul adı listesi (uzunluk = batch)."""
+    """`conditions`: eleman başına koşul adı listesi (uzunluk = batch). `patterns`: verilmezse seed'ten."""
     B = len(conditions)
-    world = World(cfg.world, B, seed, device)
-    brain = MushroomBodyBrain(cfg.brain, B, seed, device, cfg.world.dt, cfg.substeps)
+    world = World(cfg.world, B, seed, device, patterns=patterns)
+    brain = make_brain(cfg, B, seed, device)
     creature = Creature(cfg, brain, world)
     apply_conditions(creature, conditions)
     return creature

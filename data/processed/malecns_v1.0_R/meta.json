@@ -1,0 +1,24 @@
+{
+ "source": "malecns_v1.0",
+ "version": "male-cns:v1.0 (yayın: 2026-06-08)",
+ "license": "CC-BY (atıf zorunlu)",
+ "home": "https://male-cns.janelia.org/",
+ "citation_note": "FlyEM (HHMI Janelia), Cambridge Zoology, MRC LMB ve Google Research işbirliği; CC BY 4.0. Makale: https://www.cell.com/cell/fulltext/S0092-8674(26)00942-6 (Cell, 2026); ön baskı: doi:10.1101/2025.10.09.680999. Yazar listesi için makale sayfasına bakın; veriyi kullanan her yayın bu çalışmaya atıf vermelidir.",
+ "files_md5": {
+  "body-annotations-male-cns-v1.0-minconf-0.5.feather": "50a7718770c57220f160ba4f431ab89e",
+  "body-neurotransmitters-male-cns-v1.0.feather": "3d842b12fe5c49eefade528d7dd24a1f",
+  "connectome-weights-male-cns-v1.0-minconf-0.5.feather": "f30e9dcca25cfd021bf1e7b3d975599e"
+ },
+ "side": "R",
+ "min_syn": 20,
+ "counts": {
+  "PN": 123,
+  "KC": 2045,
+  "APL": 1,
+  "DPM": 1,
+  "MBON": 48,
+  "DAN": 161
+ },
+ "n_edges": 468206,
+ "n_synapses": 1485307
+}

@@ -11,3 +11,7 @@ dist/
 results/
 checkpoints/
 *.npz
+
+# Ham bağlantı verisi (büyük, lisanslı; fetch ile yeniden indirilir)
+data/raw/
+data/*.log

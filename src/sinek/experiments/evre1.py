@@ -20,8 +20,8 @@ from ..config import Config
 from . import protocol as P
 
 
-def parse_args(argv=None) -> argparse.Namespace:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+def build_parser(description: str | None = None, default_out: str = "results/evre1") -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(description=description or __doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--agents", type=int, default=20, help="koşul başına canlı sayısı")
     ap.add_argument("--episodes", type=int, default=8, help="A eğitimi bölüm sayısı")
     ap.add_argument("--reversal-episodes", type=int, default=8)
@@ -31,10 +31,14 @@ def parse_args(argv=None) -> argparse.Namespace:
     ap.add_argument("--test-every", type=int, default=2, help="kaç bölümde bir seçim testi")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--device", default="cpu")
-    ap.add_argument("--out", default="results/evre1")
+    ap.add_argument("--out", default=default_out)
     ap.add_argument("--no-plots", action="store_true")
     ap.add_argument("--quick", action="store_true", help="hızlı duman testi (anlamlı istatistik vermez)")
-    return ap.parse_args(argv)
+    return ap
+
+
+def parse_args(argv=None) -> argparse.Namespace:
+    return build_parser().parse_args(argv)
 
 
 def log(msg: str, t0: float) -> None:
@@ -47,7 +51,11 @@ def fmt_pref(d: dict) -> str:
 
 
 def main(argv=None) -> dict:
-    a = parse_args(argv)
+    return run(parse_args(argv), Config())
+
+
+def run(a: argparse.Namespace, cfg: Config, patterns=None, title: str = "Evre 1", extra: dict | None = None) -> dict:
+    """A -> C -> B hattı. `patterns`: koku desenleri (None: seed'ten); `extra`: sonuç dosyasına eklenir."""
     if a.quick:
         a.agents, a.episodes, a.reversal_episodes = 3, 2, 2
         a.episode_seconds, a.trials, a.test_seconds, a.test_every = 15.0, 2, 15.0, 1
@@ -55,9 +63,8 @@ def main(argv=None) -> dict:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    cfg = Config()
     conds = ["plastic"] * a.agents + ["frozen"] * a.agents + ["random"] * a.agents
-    creature = P.build(cfg, conds, seed=a.seed, device=a.device)
+    creature = P.build(cfg, conds, seed=a.seed, device=a.device, patterns=patterns)
     test_seed = 12345 + a.seed
     n_neurons = creature.brain.n_neurons()
     log(f"canlı başına {n_neurons} nöron; {len(conds)} canlı ({a.agents} x 3 koşul), cihaz={a.device}", t0)
@@ -123,6 +130,7 @@ def main(argv=None) -> dict:
         "contacts": {k: np.array(v).tolist() for k, v in contacts_by_cond.items()},
         "persistence": {"weights_identical": w_equal, "test_identical": identical},
         "wall_seconds": time.time() - t0,
+        "title": title, **(extra or {}),
     }
     (out / "results.json").write_text(json.dumps(result, indent=1, ensure_ascii=False))
     (out / "summary.md").write_text(render_summary(result))
@@ -186,7 +194,7 @@ def evaluate(stages, a, conds, persisted: bool) -> dict:
 
 def render_summary(r: dict) -> str:
     a = r["args"]
-    L = ["# Evre 1 sonuç özeti", ""]
+    L = [f"# {r.get('title', 'Evre 1')} sonuç özeti", ""]
     L.append(f"- Canlı başına nöron: **{r['neurons_per_creature']}** (spiking nöronlar + tat/temas nöronları)")
     L.append(f"- Canlı sayısı: koşul başına **{a['agents']}** (plastic / frozen / random), seçim denemesi canlı başına **{a['trials']}**")
     L.append(f"- Eğitim: A için {a['episodes']} bölüm, tersine çevirmede {a['reversal_episodes']} bölüm, bölüm = {a['episode_seconds']:.0f} sanal sn")

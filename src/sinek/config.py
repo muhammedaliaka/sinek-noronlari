@@ -75,6 +75,49 @@ class BrainConfig:
 
 
 @dataclass
+class ConnectomeBrainConfig:
+    """Evre 2: gerçek bağlantıdan (MaleCNS v1.0) çıkarılmış mantar cismi alt ağı.
+
+    Sayılar model varsayımıdır; bağlantı sayıları (sinaps) veriden gelir.
+    """
+    data_dir: str = "data/processed/malecns_v1.0_R"
+    n_grn: int = 8                   # tat/temas nöronu (tür başına)
+    snn_dt_ms: float = 2.0
+
+    # duyu (PN) Poisson hızları
+    pn_base_rate: float = 3.0
+    pn_max_rate: float = 120.0
+
+    # Kenyon hücreleri ve APL (gerçek PN->KC, KC->APL, APL->KC sinaps sayılarıyla)
+    tau_kc_ms: float = 10.0
+    j_pn_kc: float = 0.25            # ortalama PN->KC bağlantısı için sıçrama (sinaps sayısı ortalamaya bölünür)
+    kc_thresh: float = 1.0
+    apl_tau_ms: float = 25.0
+    apl_gain: float = 6.0
+
+    # MBON'lar (gerçek KC->MBON sinaps sayılarıyla)
+    tau_mb_ms: float = 15.0
+    mb_bias: float = 0.55
+    j_kc_mb: float = 0.02
+    w0: float = 0.5                  # MBON başına ortalama KC->MBON ağırlığı (kc_mbon_norm="mbon" iken)
+    kc_mbon_norm: str = "mbon"       # "mbon": her MBON'un toplam KC girdisi eşitlenir; "global": tek ölçek
+    class_shuffle_seed: int = -1     # >=0: KONTROL — MBON yaklaş/kaçın sınıfları karıştırılır (bölme eşlemesi aynı kalır)
+
+    # öğrenme: DAN'a bağlı, bölmeye özgü, tek yönlü baskılanma (W <- W exp(-eta dt iz D))
+    eta: float = 5.0
+    tau_elig: float = 0.3
+    elig_ref_rate: float = 50.0
+    reward_target: float = 0.6
+    recovery_rate: float = 0.0       # 1/sn; W'nin gerçek (başlangıç) değerine yavaş dönüşü (0 = kapalı)
+
+    # MBON -> değer okuması
+    tau_valence: float = 0.15
+    valence_gain: float = 40.0
+    grn_max_rate: float = 150.0
+    tau_taste: float = 0.06
+
+
+@dataclass
 class MotorConfig:
     speed: float = 8.0               # birim/saniye (yeme sırasında 0)
     turn_gain: float = 10.0          # rad/saniye (öğrenilmiş kontrast x kazanç)
@@ -86,18 +129,26 @@ class MotorConfig:
 class Config:
     world: WorldConfig = field(default_factory=WorldConfig)
     brain: BrainConfig = field(default_factory=BrainConfig)
+    cbrain: ConnectomeBrainConfig = field(default_factory=ConnectomeBrainConfig)
     motor: MotorConfig = field(default_factory=MotorConfig)
+    brain_kind: str = "synthetic"    # "synthetic" (Evre 1) | "connectome" (Evre 2)
 
     def __post_init__(self) -> None:
-        if self.brain.n_glom != self.world.n_glom:
+        if self.brain_kind not in ("synthetic", "connectome"):
+            raise ValueError(f"bilinmeyen brain_kind: {self.brain_kind}")
+        if self.brain_kind == "synthetic" and self.brain.n_glom != self.world.n_glom:
             raise ValueError("brain.n_glom ile world.n_glom eşit olmalı")
-        steps = self.world.dt * 1000.0 / self.brain.snn_dt_ms
+        steps = self.world.dt * 1000.0 / self.snn_dt_ms
         if abs(steps - round(steps)) > 1e-6 or round(steps) < 1:
             raise ValueError("world.dt, snn_dt_ms'nin tam katı olmalı")
 
     @property
+    def snn_dt_ms(self) -> float:
+        return self.cbrain.snn_dt_ms if self.brain_kind == "connectome" else self.brain.snn_dt_ms
+
+    @property
     def substeps(self) -> int:
-        return int(round(self.world.dt * 1000.0 / self.brain.snn_dt_ms))
+        return int(round(self.world.dt * 1000.0 / self.snn_dt_ms))
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -111,5 +162,7 @@ class Config:
         return cls(
             world=build(WorldConfig, d.get("world", {})),
             brain=build(BrainConfig, d.get("brain", {})),
+            cbrain=build(ConnectomeBrainConfig, d.get("cbrain", {})),
             motor=build(MotorConfig, d.get("motor", {})),
+            brain_kind=d.get("brain_kind", "synthetic"),
         )
