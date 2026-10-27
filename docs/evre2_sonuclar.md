@@ -150,7 +150,30 @@ Sonuç: ölçüt geçti; "bölme / sınıf yapısı modelde işe yarıyor" yön�
 
 ## Betimsel ablasyon: yalnızca baskılanma (`cbrain.restore=false`)
 
-Ön-kayıt planında ölçütsüz bir betimsel kontrol olarak yazılmıştı (tohum 20 kurulumu, aynı koku çifti). Koşu sürüyor; sonuç bu bölüme eklenecek.
+Ön-kayıt planında ölçütsüz bir betimsel kontrol olarak yazılmıştı (tohum 20 kurulumu, aynı koku çifti, A için 12 + tersine çevirmede 3 bölüm; **tek koşu**, ölçüt hükmü yok).
+Eğitimsiz ağ ana koşuyla aynıdır (naif sonuçlar birebir aynı); fark yalnızca geri yükleme teriminin kapalı olmasıdır.
+
+| Aşama | geri yükleme **açık** (ana koşu) | geri yükleme **kapalı** (yalnız baskılanma) |
+|---|---|---|
+| A eğitimi, bölüm 3 | 0,62 [0,44; 0,79] | 0,90 [0,77; 1,00] |
+| A eğitimi, bölüm 6 | 0,82 [0,61; 0,98] | 0,83 [0,67; 0,97] |
+| A eğitimi, bölüm 9 | 0,82 [0,68; 0,94] | 0,92 [0,83; 1,00] |
+| A eğitimi, bölüm 12 | 0,92 [0,85; 0,98] | 0,83 [0,69; 0,94] |
+| ödül B'ye taşındı, bölüm 15 | **0,49 [0,25; 0,72]** | **0,73 [0,60; 0,86]** |
+
+Betimsel okuma (tek koşu, GA'lar örtüşüyor; kesin sonuç değil):
+
+* Yalnız baskılanma ile öğrenme **erken daha hızlı** görünüyor (bölüm 3'te 0,90), ama bölüm 3–12 arasında düzenli artış yok (0,90 → 0,83 → 0,92 → 0,83); geliştirmede gözlenen "erime" tam protokolde
+  A-tercihi üzerinde **net biçimde görülmedi** (A-tercihi doğrudan ΔV ölçmez).
+* **Tersine çevirme belirgin şekilde yavaş:** 3 bölümden sonra A-tercihi 0,83 → 0,73 (ana koşuda 0,92 → 0,49); `plastic`'in B'ye döndüğü gösterilemedi. Geri yükleme terimi, ödül tersine dönünce önceki baskılanmayı
+  geri alarak karar değişikliğini hızlandırıyor gibi görünüyor. Bu, yalnızca 3 tersine çevirme bölümü ve tek koşuya dayanır; daha uzun tersine çevirme denenmedi.
+
+## Bir hata ve düzeltmesi (şeffaflık)
+
+Ablasyon koşusu ilk seferde `--set cbrain.restore=false` ile başlatıldı; ancak `--set` bool alanları `bool("false")` = `True` olarak okuyordu, yani koşu **ana koşuyla aynı yapılandırmayla** çalıştı
+(kayıtlı yapılandırmada `restore: true` görünüyordu; sonuçlar ana koşuyla birebir aynıydı). Fark, sonuçlar ana koşuyla karşılaştırılırken fark edildi. Hata düzeltildi (bool alanlar `true/false/1/0` olarak ayrıştırılır;
+`tests/test_evre2_overrides.py`) ve ablasyon yeniden koşuldu; yukarıdaki tablo düzeltilmiş koşuya aittir. Aynı `--set` mekanizması E1 karıştırma koşularında yalnızca **tamsayı** alanı (`class_shuffle_seed`) için kullanıldı
+(kayıtlı yapılandırmada 1 ve 2 görünüyor) ve doğrulayıcı koşular (`--set` yok) bundan etkilenmedi. Yanlış koşu kazara bir tekrarlanabilirlik kontrolüne dönüştü (sınırlama 10).
 
 ## Evre 1 ile karşılaştırma
 
