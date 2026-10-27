@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+build/
+dist/
+
+# Deney çıktıları (yeniden üretilebilir); özet raporlar docs/ altında tutulur
+results/
+checkpoints/
+*.npz
