@@ -115,7 +115,14 @@ def apply_override(cfg: Config, item: str) -> None:
     obj = getattr(cfg, section)
     if not hasattr(obj, name):
         raise SystemExit(f"bilinmeyen alan: {key}")
-    setattr(obj, name, type(getattr(obj, name))(val))
+    cur = getattr(obj, name)
+    if isinstance(cur, bool):  # bool("false") True olurdu
+        low = val.strip().lower()
+        if low not in ("true", "false", "1", "0"):
+            raise SystemExit(f"{key}: true/false bekleniyor, '{val}' verildi")
+        setattr(obj, name, low in ("true", "1"))
+    else:
+        setattr(obj, name, type(cur)(val))
 
 
 def _git_commit() -> str | None:
