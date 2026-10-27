@@ -15,7 +15,7 @@ import torch
 from .agent import Creature
 from .brain import MushroomBodyBrain
 from .config import Config
-from .world import World
+from .world import World, odor_patterns
 
 FORMAT_VERSION = 1
 
@@ -51,7 +51,8 @@ def load(path: str | Path, device: str = "cpu", world_seed: int | None = None) -
     W = torch.from_numpy(z["W"])
     B = W.shape[0]
     seed = meta["seed"]
-    world = World(cfg.world, B, seed if world_seed is None else world_seed, device)
+    world = World(cfg.world, B, seed if world_seed is None else world_seed, device,
+                  patterns=odor_patterns(cfg.world, seed))
     brain = MushroomBodyBrain(cfg.brain, B, seed, device, cfg.world.dt, cfg.substeps)
     brain.load_state_dict({"W": W, "kc_inputs": torch.from_numpy(z["kc_inputs"]), "seed": seed})
     creature = Creature(cfg, brain, world)

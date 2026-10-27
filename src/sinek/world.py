@@ -30,12 +30,24 @@ def odor_patterns(cfg: WorldConfig, seed: int) -> torch.Tensor:
 
 
 class World:
-    def __init__(self, cfg: WorldConfig, batch: int, seed: int, device: str = "cpu"):
+    def __init__(
+        self,
+        cfg: WorldConfig,
+        batch: int,
+        seed: int,
+        device: str = "cpu",
+        patterns: torch.Tensor | None = None,
+    ):
+        """`patterns`: koku desenleri (n_odors, n_glom). Verilmezse `seed`ten üretilir.
+
+        Test dünyaları, eğitim dünyasının desenlerini burada geçirmelidir; aksi halde
+        "A" ve "B" canlının öğrendiği kokular olmaz.
+        """
         self.cfg = cfg
         self.B = batch
         self.device = torch.device(device)
         self.gen = torch.Generator(device=self.device).manual_seed(seed + 1)
-        self.patterns = odor_patterns(cfg, seed).to(self.device)
+        self.patterns = (odor_patterns(cfg, seed) if patterns is None else patterns).to(self.device)
         # (B, n_odors): A ödüllü, B ödülsüz varsayılan
         self.reward_by_odor = torch.zeros(batch, cfg.n_odors, device=self.device)
         self.reward_by_odor[:, 0] = 1.0

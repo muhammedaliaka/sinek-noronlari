@@ -97,6 +97,18 @@ class ChoiceResult:
         return out
 
 
+def make_test_creature(creature: Creature, agents: torch.Tensor, seed: int) -> Creature:
+    """Seçilen canlıların (tekrarlar dahil) aynı beyin ve AYNI KOKU DESENLERİYLE test kopyası."""
+    idx = torch.as_tensor(agents, dtype=torch.long)
+    world = World(
+        creature.cfg.world, len(idx), seed, str(creature.world.device),
+        patterns=creature.world.patterns,
+    )
+    test = Creature(creature.cfg, creature.brain.select(idx), world)
+    test.turn_gain = creature.turn_gain[idx.to(creature.turn_gain.device)].clone()
+    return test
+
+
 @torch.no_grad()
 def choice_test(
     creature: Creature, trials: int, seconds: float = 40.0, seed: int = 12345
@@ -106,10 +118,8 @@ def choice_test(
     Her canlı `trials` kez, her denemede yeni rastgele yön / A-B tarafı ile sınanır.
     """
     cfg, B = creature.cfg, creature.world.B
-    world = World(cfg.world, B * trials, seed, str(creature.world.device))
-    brain = creature.brain.expand(trials)
-    test = Creature(cfg, brain, world)
-    test.turn_gain = creature.turn_gain.repeat_interleave(trials)
+    test = make_test_creature(creature, torch.arange(B).repeat_interleave(trials), seed)
+    world = test.world
     test.reset_episode("choice")
     test.run(seconds, learn=False, stop_when_done=True)
 
@@ -173,10 +183,8 @@ def record_trajectories(
 ) -> dict:
     """Seçili canlıların seçim testindeki yollarını kaydeder (görselleştirme için)."""
     cfg = creature.cfg
-    idx = torch.as_tensor(list(agents), dtype=torch.long)
-    world = World(cfg.world, len(idx), seed, str(creature.world.device))
-    test = Creature(cfg, creature.brain.select(idx), world)
-    test.turn_gain = creature.turn_gain[idx.to(creature.turn_gain.device)].clone()
+    test = make_test_creature(creature, torch.as_tensor(list(agents), dtype=torch.long), seed)
+    world = test.world
     test.reset_episode("choice")
     path = [world.pos.clone()]
     for _ in range(int(round(seconds / cfg.world.dt))):
