@@ -37,7 +37,7 @@ Tarih: 2026-10-28. Etiketler: **[doğrulandı]** kaynakla kontrol edildi, **[do�
 | **BANC** (dişi, **beyin + sinir kordonu**; Nature'da yayımlandı) | beyin + VNC | **~160 bin** (bir kaynak 158 262) [kısmen doğrulandı: [Tuthill lab pdf](https://faculty.washington.edu/tuthill/docs/banc2026.pdf), [FlyWire blog](https://blog.flywire.ai/?p=1823)] | büyüklük mertebesi ~10⁸ [doğrulanmadı] | kontrol edilmedi | kullanılmadı |
 
 **Dikkat — mesajınızdaki rapordaki rakamlar** ("BANC ~188 000 nöron, ~199 milyon sinaps"): benim aramamda **doğrulanamadı**; kaynaklar BANC için ~160 bin nöron ve ~10⁸ sinaps mertebesi veriyor.
-Rapordaki sayı farklı bir sayım ölçütünden (ör. parçalar/fragmanlar dahil) gelmiş olabilir. Karar vermeden önce makaleden (Nature) kontrol edilecek (iş: V-01). Rakam sıralaması
+Rapordaki sayı farklı bir sayım ölçütünden (ör. parçalar/fragmanlar dahil) gelmiş olabilir. Karar vermeden önce makaleden (Nature) kontrol edilecek (iş: V-01; kısmen yapıldı, `docs/dis_kaynak_dogrulamalari.md`: ~158 bin nöron iki ikincil kaynakta var, 188 000 / 199 milyon bulunamadı). Rakam sıralaması
 (hangisi "daha büyük") bizim kararımızı değiştirmez; çünkü karar *nöron sayısına* değil *kapsam, kalite, lisans ve elimizdeki boru hattına* dayanır.
 
 **Neden toplanmaz:** aynı tür; aynı hücre tipleri üç haritada da bulunur (farklı bireyler, MaleCNS erkek, diğerleri dişi). MaleCNS makalesi 262 cinsiyete özgü ve 114 cinsel dimorfik hücre tipi bildiriyor
@@ -68,7 +68,7 @@ Her satır: **kod · risk · erken uyarı (nasıl anlarız) · hazır yedek plan
 | R-A2 ● | **Kapsam farkı:** FlyWire'da VNC yok; kesik aksonlar (boyun) → inen/çıkan nöronlar eksik girdi/çıktı alır | sınır nöronlarında ortalamadan çok düşük giriş derecesi; sessiz kalan nöronlar | sınır nöronları işaretlenir; tonik sürüş ile hedef ateşleme hızına kalibre (homeostatik); sonuçlar "sınır etkisi" duyarlılığıyla raporlanır |
 | R-A3 ◐ | **Sinaps tespit eşiği:** her veri setinin sinaps güven eşiği farklı; sayı = güç değildir | eşiği değiştirince sonuç değişiyor | eşik taraması (3 değer) her ana sonuçta duyarlılık tablosu |
 | R-A4 ● | **Sinaps sayısı → ağırlık:** Evre 2'de ortalamaya bölme varsayımı kullandık; veri setleri arası ölçek bağımsız | iki harita aynı tip için ölçekçe farklı giriş derecesi | veri seti başına ölçek, ortak çapa tiplerinin (ör. KC, PN) girişine göre kalibre; yoksa birleştirme yapma |
-| R-A5 ◐ | **Lisans/atıf:** MaleCNS CC BY [doğrulandı]; FlyWire/BANC/Eon/FlyGym için kontrol edilmedi; Eon GPL (kopyaleft) [proje raporu; doğrulanmadı] | türev iş GPL'e bağlanıyor | kullanmadan önce lisans tablosu (V-02); GPL kodu *kopyalama*, yalnız yöntem/çıktı karşılaştırması |
+| R-A5 ◐ | **Lisans/atıf** (ayrıntı: `docs/dis_kaynak_dogrulamalari.md`): MaleCNS CC BY [doğrulandı]; **FlyWire CC BY-NC 4.0** [doğrulandı: resmî Principles sayfası]; BANC lisansı bulunamadı [doğrulanmadı]; FlyGym PyPI'de MPL 2.0 [kısmen doğrulandı]; Eon "GPL" iddiası bulunamadı [doğrulanmadı] | türev iş GPL'e bağlanıyor | kullanmadan önce lisans tablosu (V-02); GPL kodu *kopyalama*, yalnız yöntem/çıktı karşılaştırması |
 | R-A6 ○ | **Boyut/indirme:** ham dosyalar ~GB; proxy/zaman aşımı | indirme yarıda kesilir | boyut+md5 doğrulama (zaten var); devam ettirilebilir indirme |
 
 ### 3.2 Hücre tipi ve homoloji uzmanı
