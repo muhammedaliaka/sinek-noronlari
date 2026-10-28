@@ -43,6 +43,33 @@ Anosmik kol, öğrenme kapalı, 24 canlı × 8 deneme, O1a yerleşimleri:
 * canlı başına zaman-ortalamalı kontrast: havuz ortalaması −0,0002; |ortalama| 0,0013 (≈ 0,08 rad/s); |z| > 2,58 olan canlı oranı 0,04 (sıfır yanlılıkta ≈ 0,01; 24 canlıda 1 canlı).
 * **Sonuç:** ön-eğitimli ağda pratik bir tek-yönlü dönüş yanlılığı yok. Bu ölçüm **öğrenme açıkken, oturum boyunca** tekrarlanmalı (hemisfere-özgü öğrenme sonrası yanlılık riski, plan Z-16) — O3 oturum koşusu bunu `plastic` kollarında ayrıca raporlar.
 
-## 4. Henüz koşulmadı / sürüyor
+## 4. O2-tam (koku kaynağın tamamında; kör bölge girişi), oyun tohumu 101
 
-O2-tam (kör bölge girişi aralığı, G2), O3 çarpanlı oturum (kol ayrışma oranı → güç girdisi), O4a/O4c (çekim odası kapısı G4) — sonuçlar aşağıya eklenecek.
+| kol | p_hit |
+|---|---|
+| frozen | 0,510 |
+| anosmik | 0,240 |
+| random | 0,297 |
+| referans | 0,724 |
+
+* frozen − anosmik **+0,271** [%99 GA +0,198; +0,354]. Koku alanı görülen deneme oranı 0,65 (frozen) / 0,77 (referans): denemelerin ≈%35'inde canlı koku bölgesine hiç girmedi. Sızıntı denetimi: 68 deneme, ihlal 0.
+* Referans 0,724 (<0,80): O2-tam **betimsel** oyundur; çözülebilirlik kapısı yalnız O2-yakın için uygulanır (plan §8, K-024). Bu bir bulgu olarak doğrulayıcıda da raporlanır.
+
+## 5. O3 (koku yalnız temasta), oyun tohumu 102 — oturum pilotu (2 kopya × 16 deneme)
+
+| kol | p_hit | ilk yarı | ikinci yarı |
+|---|---|---|---|
+| plastic:A (ödül+koku) | 0,272 | 0,263 | 0,281 |
+| plastic:B (ödül, koku yok) | 0,247 | 0,240 | 0,255 |
+| plastic:C (ödülsüz, koku var) | 0,273 | 0,258 | 0,289 |
+| plastic:D (ikisi de yok) | 0,247 | 0,250 | 0,245 |
+| frozen:A | 0,250 | 0,242 | 0,258 |
+
+* Kör düzey ≈0,25 (T=25 sn); plastic − frozen farkları −0,003…+0,023, hepsinde %99 GA 0'ı kapsıyor → **kör düzeyde, öğrenme etkisi yok** (beklenen: bu canlıda konum belleği mekanizması yok).
+* Kol ayrışması (CRN sağlığı; güç girdisi): 1. denemede 0, sonraki denemelerde %19-35 (K-025) → doğrulayıcı tasarımı 4 kopya (canlı başına 64 deneme).
+
+## 6. O4a / O4c (sönüm; decoy), oyun tohumları 103-109 — oturum ve çekim pilotları
+
+* **Çekim odası (frozen − anosmik decoy-ilk):** O4a +0,253 (tohum 104) ve +0,271 (108); O4c +0,268 (107) ve +0,260 (109). Birleşik ≈ +0,265 (≈1,8δ). Bu ölçüm plandaki geçici ≥2δ kapısını yanlış kılar → K-025 (kapı = manipülasyon denetimi, ≥δ).
+* **O4a oturum pilotu (tohum 103; 12 bölüm × 2 kopya):** öğrenme kapalı anlık testte decoy-ilk oranı plastic 0,562 (bölüm 0) → 0,188 (3) → 0,271 (6) → 0,167 (12); frozen 0,562 → 0,542 → 0,562 → 0,500; anosmik 0,21-0,29. Plastic'in düşüşü gözlendi (sönüm benzeri); bu bir pilottur.
+* **O4c oturum pilotu (tohum 106):** plastic decoy-ilk 0,500 → 0,188 → 0,167 → 0,208, gerçek-ilk 0,042 → 0,188 → 0,167 → 0,208 (anosmik gerçek-ilk 0,15-0,31: kör düzey). **Gözlem (hata aranacak):** plastic için bölüm 3, 6 ve 12'de decoy-ilk ve gerçek-ilk **sayıları birebir aynı** (9/9, 8/8, 10/10 / 48). Olay kümeleri ayrık (ortak eleman yok), yani kodda doğrudan özdeşlik yok; üç ardışık eşitliğin rastlantı olasılığı küçük (kabaca ≈10⁻³). Doğrulayıcı O4c (tohum 242/243) çıktılarında aynı örüntü yineleniyorsa slot atama / temas sırası kodu denetlenir (R-4); yinelenmiyorsa rastlantı sayılır ve burada kayıtlı kalır.
