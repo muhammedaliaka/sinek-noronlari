@@ -21,7 +21,7 @@ class Thr:
     delta_eq: float = 0.10       # eşdeğerlik / aşağı-tarafsızlık marjı — aday
     alpha: float = 0.01
     ref_min: float = 0.80        # referans karşılaştırıcı çözülebilirlik kapısı
-    attract_mult: float = 2.0    # O4 çekim odası kapısı: frozen − anosmik ≥ attract_mult·δ (ön-kayıtta güç türetmesiyle dondurulur)
+    attract_mult: float = 1.0    # O4 çekim odası kapısı: frozen − anosmik ≥ attract_mult·δ (ön-kayıtta güç türetmesiyle dondurulur)
     anos_lo: float = 0.15        # anosmik (kör) düzey penceresi (O1)
     anos_hi: float = 0.45
     n_boot: int = 4000

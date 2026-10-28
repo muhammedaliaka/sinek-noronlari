@@ -67,12 +67,14 @@ def scenarios(game: str, thr: Thr, p0: float, pa: float, ref: float) -> list[tup
                 (f"TAM sönüm (plastic=anosmik düzey, −A={A:.3f})", {**base, "plastic": p0}),
                 ("çekim yok (G4 başarısız olmalı)", {"frozen": p0, "anosmic": p0, "plastic": p0 - d})]
     if game == "O4c":
-        pr = 0.15
-        base = {"anosmic": (p0, pr), "frozen": (pa, 0.05)}
-        return [("sıfır etki (plastic=frozen)", {**base, "plastic": (pa, 0.05)}),
-                (f"etki δ={d}, gerçek-ilk korunur", {**base, "plastic": (pa - d, pr)}),
-                (f"etki 2δ={2 * d}, gerçek-ilk korunur", {**base, "plastic": (pa - 2 * d, pr)}),
-                ("etki 2δ ama gerçek-ilk çöker", {**base, "plastic": (pa - 2 * d, 0.0)})]
+        pr_a, pr_f = 0.23, 0.11                       # pilottan: anosmik gerçek-ilk ≈0,23 (kör düzey); frozen decoy'a kayar → gerçek-ilk ≈0,11
+        base = {"anosmic": (p0, pr_a), "frozen": (pa, pr_f)}
+        return [("sıfır etki (plastic=frozen)", {**base, "plastic": (pa, pr_f)}),
+                (f"etki δ={d}, gerçek-ilk kör düzeye çıkar", {**base, "plastic": (pa - d, pr_a)}),
+                (f"etki 1,5δ={1.5 * d:.3f}, gerçek-ilk kör düzeye çıkar", {**base, "plastic": (pa - 1.5 * d, pr_a)}),
+                (f"TAM sönüm (decoy-ilk=anosmik düzey {p0}), gerçek-ilk kör düzey", {**base, "plastic": (p0, pr_a)}),
+                ("tam sönüm ama gerçek-ilk çöker (0,0)", {**base, "plastic": (p0, 0.0)}),
+                ("çekim yok (G4 başarısız olmalı)", {"anosmic": (p0, pr_a), "frozen": (p0, pr_a), "plastic": (p0 - d, pr_a)})]
     raise ValueError(game)
 
 
@@ -107,7 +109,7 @@ def main(argv=None) -> None:
     ap.add_argument("--het", type=float, default=0.0, help="canlıya özgü etki yayılımı (göreli) — pilottan")
     ap.add_argument("--ref-min", type=float, default=0.80, help="doğrulayıcıda referans kapısı (O2'de tasarım-zamanı G1 ayrı ve büyük örnekle)")
     ap.add_argument("--append", action="store_true", help="--out varsa sonuna ekle")
-    ap.add_argument("--attract-mult", type=float, default=2.0, help="O4 çekim odası kapısı çarpanı (frozen−anosmik ≥ çarpan·δ)")
+    ap.add_argument("--attract-mult", type=float, default=1.0, help="O4 çekim odası kapısı çarpanı (frozen−anosmik ≥ çarpan·δ)")
     ap.add_argument("--delta", type=float, default=0.15)
     ap.add_argument("--delta-eq", type=float, default=0.10)
     ap.add_argument("--boot", type=int, default=1000)

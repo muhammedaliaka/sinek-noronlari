@@ -127,7 +127,7 @@ def main(argv=None) -> dict:
     ap.add_argument("--seconds", type=float, default=25.0)
     ap.add_argument("--delta", type=float, default=0.15)
     ap.add_argument("--delta-eq", type=float, default=0.10)
-    ap.add_argument("--attract-mult", type=float, default=2.0)
+    ap.add_argument("--attract-mult", type=float, default=1.0)
     ap.add_argument("--boot", type=int, default=10000)
     ap.add_argument("--pilot", action="store_true")
     ap.add_argument("--threads", type=int, default=None)
