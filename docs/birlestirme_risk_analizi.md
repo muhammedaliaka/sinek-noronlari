@@ -248,11 +248,11 @@ Açık kalan tek konu: 300 bin+ ham birleşim **bilimsel** nesne olarak istenirs
 
 ## 9. Devir (GPU'ya geçiş) kontrol listesi
 
-GPU'ya geçildiğinde bu sohbet kapanacağı için bağlam **yalnız depoda** yaşar. Geçişten önce yapılacaklar (hepsi `bekliyor`):
+GPU'ya geçildiğinde bu sohbet kapanacağı için bağlam **yalnız depoda** yaşar. Geçişten önce yapılacaklar (durum 2026-10-28):
 
-1. **Kurulum betiği ve README:** Windows/PowerShell'de sıfırdan kurulum (Python sürümü, `pip install -e .`, CUDA'lı PyTorch), veri indirme, `pytest`, duman testi; her komut çalıştırılarak denenmiş olmalı.
-2. **CUDA yolu duman testi:** kod cihaz-bağımsız yazıldı ama CUDA yolu **bu ortamda sınanmadı** (README). GPU'da `--quick` + küçük Evre 2b koşusu CPU sonuçlarıyla tolerans içinde eşleşmeli (R-H3). Ölçüt: CPU↔GPU aynı tohumda sonuçlar önceden yazılmış toleransta.
-3. **Ölçek eğrisi betiği** (3.0 adımı): 5 bin → 160 bin nöron, adım/sn, RAM, VRAM tablosu; 8 GB VRAM sınırının nereye denk geldiği.
-4. **Yeniden başlatılabilir koşular** (V-03; E-09).
-5. **Devir notu:** `CLAUDE.md` + `karar_defteri.md` + bu belge güncel; sonuçların nerede olduğu (`results/` git'te yok → önemli sonuçların özeti `docs/` içinde).
-6. **Altın koşu:** küçük, deterministik, özeti sabit bir koşu; yeni makinede kurulumun doğru olduğunu tek komutla gösterir.
+1. **Kurulum betiği ve README** — `bekliyor`: Windows/PowerShell'de sıfırdan kurulum (Python sürümü, `pip install -e .`, CUDA'lı PyTorch), veri indirme, `pytest`, duman testi; her komut çalıştırılarak denenmiş olmalı (bu ortam Linux/CPU: Windows adımları denenemez, "denenmedi" diye işaretlenecek).
+2. **CUDA yolu duman testi** — `hazır, GPU'da denenmedi`: `python3 -I -m sinek.experiments.altin_kosu --device cuda --check docs/altin_kosu_referans.json`. CPU↔GPU nokta nokta eşleşme **beklenmez** (Poisson akışı cihaza özgü); denetim istatistikseldir: CPU'da 8 beyin tohumunun ortalaması ±4·SD (en az mutlak tolerans), tolerans koşudan önce yazıldı. Aynı cihazda tekrar bit-bit aynı olmak zorunda.
+3. **Verim eğrisi betiği** — `kısmen hazır`: `python3 -I -m sinek.experiments.olcek_egrisi --device cuda --batches 64,256,1024,4096` (adım/sn, bellek; sabit ağ, değişen canlı sayısı, topluluk K için canlı·K). **Tam-CNS 5 bin → 160 bin nöron seyrek yolu bu depoda yok**; yalnız mantar cismi alt ağı ölçülür. 8 GB VRAM sınırı ölçüm sonucudur, henüz yok.
+4. **Yeniden başlatılabilir koşular** (V-03; E-09) — `yapıldı`: `scripts/run_validators.sh` kuyruğu + O3/O4 doğrulayıcısında kol-kol kontrol noktası (K-029); Evre 2b (E-09) önceden vardı.
+5. **Devir notu** — `bekliyor`: `CLAUDE.md` + `karar_defteri.md` + bu belge güncel; sonuçların nerede olduğu (`results/` git'te yok → önemli sonuçların özeti `docs/` içinde: `odor_o1_o2_sonuclari.md`, O3/O4 sonuç belgesi yazılacak).
+6. **Altın koşu** — `yapıldı (CPU)`: `python3 -I -m sinek.experiments.altin_kosu --device cpu --check docs/altin_kosu_referans.json` (~25 sn, 16 canlı); referans CPU, torch 2.14.1+cpu üzerinde üretildi, farklı torch sürümünde yeniden üretilmeli.
