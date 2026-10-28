@@ -125,3 +125,13 @@ gerektiğinde geçmişteki benzer kararı hızlıca bulmaktır.
 | `7be599a` | 2026-10-28 | README: dört koku oyunu durumu |
 | `da92213` | 2026-10-28 | Oturum doğrulayıcısı (O3/O4a/O4c), snapshot(reps), O3 güç senaryosu (5 kol) |
 | `5397b5d` | 2026-10-28 | O3 ve O4 ÖN-KAYIT belgeleri, O3/O4 güç analizi, K-025 |
+| `70cd30d` | 2026-10-28 | Evre 3.3 R-8 veri kontrolü: DAN girdi bileşimi ve MBON→DAN analizi, K-026, DAN plan taslağı, yeniden başlatmaya dayanıklı doğrulayıcı kuyruğu |
+| `c7ea716` | 2026-10-28 | DAN devresi varyantları (DanBrain V0–V3, kontrol, testler), test-zamanı topluluk okuması, geliştirme harness'ları, pilot O2-tam/O3/O4, E-13 |
+| `a8963b3` | 2026-10-28 | scale_dev: gürültüsüz değer tablosu (K→∞ üst sınırı) kolu |
+| `5e701ec` | 2026-10-28 | O1/O2 doğrulayıcı sonuçları: O1a, O1b, O2-yakın iki popülasyonda BAŞARILI; K-027 |
+| `734dc10` | 2026-10-28 | K-028: gürültüsüz değer üst sınırı (0,818) — ana sınır değer gürültüsü; ölçek ekseni öncelikli |
+| `f2e6b97` | 2026-10-28 | scale_dev: tau_valence geçersiz kılma seçeneği (geliştirme taraması) |
+| `3c65cf7` | 2026-10-28 | V-03: O3/O4 doğrulayıcısı kol-kol kontrol noktası; devam testi |
+| `60961d9` | 2026-10-28 | K-029: V-03 kontrol noktası kararı |
+| `72b0f90` | 2026-10-28 | Evre 3.3 plan taslağı: DAN ızgarası ve K-028 bulguları, kararlılık kapısı, ölçek önceliği |
+| `489bf90` | 2026-10-28 | Evre 3.3 plan: tablo düzeltmeleri |
