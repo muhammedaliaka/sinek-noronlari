@@ -20,6 +20,47 @@ from ..games.protocol import hits, make_game_creature, play
 from .stats import cluster_bootstrap_ci, paired_cluster_ci
 
 
+class LookupBrain:
+    """K→∞ üst sınırı: öğrenilmiş değerin gürültüsüz beklentisi. V = f_canlı,yarımküre(s), s = ödüllü kokunun glomerül düzeyi.
+    Tablo, dondurulmuş beynin sabit girdide uzun ortalamasından gelir (kayan zaman EMA gecikmesi ve nonlineer okuma ihmal edilir)."""
+
+    def __init__(self, world, table, grid, trials):
+        self.world, self.table, self.grid, self.trials = world, table, grid, trials
+        self.cre = torch.arange(world.B) // trials
+
+    def reset_state(self) -> None:
+        pass
+
+    def step(self, glom, taste, touch, learn: bool = False):
+        mask = self.world.reward_mask().unsqueeze(1)
+        s = ((glom * mask).sum(-1) / mask.sum(-1).clamp(min=1)).clamp(0, 1)          # (B,2)
+        pos = s * (len(self.grid) - 1)
+        lo = pos.floor().long().clamp(0, len(self.grid) - 2)
+        f = pos - lo
+        cre = self.cre.unsqueeze(1).expand_as(lo)
+        h = torch.arange(2).view(1, 2).expand_as(lo)
+        return self.table[lo, cre, h] * (1 - f) + self.table[lo + 1, cre, h] * f
+
+
+def build_table(pre, c_ref, agents, trials, n_grid=21, steps=120, burn=40):
+    brain = pre.brain.select(torch.as_tensor(agents, dtype=torch.long))
+    brain.eta_scale = torch.zeros_like(brain.eta_scale)
+    mask = c_ref.world.reward_mask()[::trials].unsqueeze(1)                          # (A,1,G)
+    grid = torch.linspace(0, 1, n_grid)
+    tab = torch.zeros(n_grid, len(agents), 2)
+    z = torch.zeros(len(agents))
+    for i, sv in enumerate(grid):
+        brain.reset_state()
+        g = (sv * mask).expand(len(agents), 2, -1).contiguous()
+        acc = []
+        for t in range(steps):
+            v = brain.step(g, z, z, learn=False)
+            if t >= burn:
+                acc.append(v)
+        tab[i] = torch.stack(acc).mean(0)
+    return tab, grid
+
+
 def _hits(pre, game, arm, agents, trials, seed, seconds, k=0):
     c = make_game_creature(pre, game, arm, agents, trials, seed)
     if k:
@@ -34,6 +75,7 @@ def main(argv=None) -> None:
     ap.add_argument("--game", default="O1a")
     ap.add_argument("--seed", type=int, required=True)
     ap.add_argument("--ks", default="1,2,4")
+    ap.add_argument("--oracle", action="store_true", help="K→∞ üst sınırı: gürültüsüz değer tablosu ile frozen kol")
     ap.add_argument("--agents", type=int, default=24)
     ap.add_argument("--trials", type=int, default=8)
     ap.add_argument("--seconds", type=float, default=25.0)
@@ -51,7 +93,16 @@ def main(argv=None) -> None:
     h_fr, o_fr = _hits(pre, a.game, "frozen", agents, a.trials, a.seed, a.seconds)
     print(f"[{time.time() - t0:5.0f}s] anosmik {h_an.mean():.3f} referans {h_ref.mean():.3f} frozen(sarmasız) {h_fr.mean():.3f}", flush=True)
     rows = []
-    for k in [int(x) for x in a.ks.split(",")]:
+    if a.oracle:
+        c = make_game_creature(pre, a.game, "reference", agents, a.trials, a.seed)
+        tab, grid = build_table(pre, c, agents, a.trials)
+        c.brain = LookupBrain(c.world, tab, grid, a.trials)
+        o = play(c, a.seconds, learn=False, test=True)
+        h = hits(o).reshape(len(agents), a.trials)
+        m, lo, hi = paired_cluster_ci(h.sum(1), h_an.sum(1), a.trials, n=4000, alpha=0.01)
+        rows.append(f"| ∞ (gürültüsüz tablo) | {h.mean():.3f} | {m:+.3f} [{lo:+.3f}, {hi:+.3f}] | {np.mean(h_ref) - h.mean():+.3f} |")
+        print(f"[{time.time() - t0:5.0f}s] K=∞: {rows[-1]}", flush=True)
+    for k in [int(x) for x in a.ks.split(",") if x]:
         h, o = _hits(pre, a.game, "frozen", agents, a.trials, a.seed, a.seconds, k=k)
         if k == 1:
             same = bool(np.array_equal(h, h_fr) and np.array_equal(o["slot"], o_fr["slot"]))
