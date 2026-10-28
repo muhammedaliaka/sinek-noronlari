@@ -19,6 +19,7 @@ Tarih: 2026-10-28. Etiketler: **[doğrulandı]** kaynakla kontrol edildi, **[do�
    üretir; bunlar birbirine karşı çalışır ("çift devre sorunu"). 300 bin+ nöron daha **zeki** bir yaratık vermez; zekâ sayıdan değil devre yapısı, öğrenme kuralı ve
    görevden gelir. 300 bin+ ancak (a) bir **ölçek/mühendislik stres testi** olarak (bilimsel iddiasız) ya da (b) iki omurgayı **birleştirmeden, çapraz doğrulama için ayrı ayrı** koşturarak anlamlıdır.
    Önerim: omurga **tek** (MaleCNS), diğer veri setleri **doğrulama ve belirli tamamlayıcı modüller** için kullanılır (Bölüm 4).
+   *Güncelleme (kullanıcı kararı):* nöron sayısı için sınır yok; hedef "oyunda en hızlı öğrenen ve en akıllı beyin"; sayı gerekirse bir sonuç olur, hedef olmaz (Bölüm 8).
 3. **"Daha zeki, hatalarını daha hızlı anlayan yaratık."** Bunu ölçülebilir hâle getirdim (Bölüm 6): öğrenme hızı, genelleme, tersine çevirme hızı, unutma, ve özellikle
    **hata tespiti gecikmesi** (beklenen ödül gelmediğinde davranışın ne kadar sürede değiştiği). Hata tespiti devresi gerçek MB'de MBON→DAN geri beslemesidir; Evre 2'de bu geri beslemeyi
    **elle yazdık** (`delta = temas·(0.6·ödül − V)`). Bunu veriden gelen bağlantıyla değiştirmek ayrı, sınanabilir bir kilometre taşıdır (R-E3).
@@ -130,7 +131,7 @@ Her satır: **kod · risk · erken uyarı (nasıl anlarız) · hazır yedek plan
 
 | Kod | Risk | Erken uyarı | Hazır yedek plan |
 |---|---|---|---|
-| R-H1 ● | **Ölçek:** bugünkü ortam 4 çekirdek CPU, ~16 GB RAM, GPU yok; Evre 2b'nin 72 canlı × 4 780 nöronluk (~344 bin nöron-örneği) bir koşusu ~3 saat sürüyor. 160 bin nöronlu *tek* canlı bile CPU'da bu ortamda uygun değil | adım/sn ölçümü hedefin çok altında | **ölçek eğrisi** ölçümü (5 bin, 20 bin, 50 bin, 100 bin, 160 bin nöron: adım/sn, RAM, VRAM); seyrek (CSR) GPU yolu; GPU'lu ortam (kullanıcının dizüstü GPU'su ya da bulut) gerekirse **kullanıcı kararı** (Bölüm 8) |
+| R-H1 ● | **Ölçek:** bugünkü ortam 4 çekirdek CPU, ~16 GB RAM, GPU yok; Evre 2b'nin 72 canlı × 4 780 nöronluk (~344 bin nöron-örneği) bir koşusu ~3 saat sürüyor. 160 bin nöronlu *tek* canlı bile CPU'da bu ortamda uygun değil | adım/sn ölçümü hedefin çok altında | **ölçek eğrisi** ölçümü (5 bin, 20 bin, 50 bin, 100 bin, 160 bin nöron: adım/sn, RAM, VRAM); seyrek (CSR) GPU yolu; hedef donanım **RTX 3070 Ti Mobile 8 GB + 32 GB RAM** (Bölüm 8); 8 GB VRAM'e sığmazsa alt ağ stratejisi / yarım duyarlık / canlı başına yalnız plastik ağırlıklar |
 | R-H2 ● | **İstatistiksel güç / bütçe:** Evre 2b'de canlı başına aşırı yayılım yok (varyans oranı ~0,8) → güç, canlı sayısından çok deneme sayısıyla artıyor | tasarım ızgarası (`evre2b_guc_analizi.md`) | büyük ağda az canlı × çok deneme; ama küme-düzeyi analiz korunur; güç analizi her yeni tasarımdan **önce** |
 | R-H3 ◐ | **Sayısal tekrarlanabilirlik:** CPU↔GPU, iş parçacığı sayısı → kayan nokta farkları | aynı tohum farklı sonuç | tolerans temelli tekrarlanabilirlik; CPU referans koşusu (2/4 iş parçacığı birebir aynı, bu makinede doğrulandı) |
 | R-H4 ● | **Uzun koşuların kırılganlığı:** konteyner yeniden başlayınca koşu ölür (Evre 2b geliştirmesinde yaşandı) | koşu logu aniden durur | **aşama başına yeniden başlatılabilir kontrol noktası** (ölçek büyütmeden önce yapılacak iş: V-03) |
@@ -231,11 +232,27 @@ Metrikler: ölçütlere ulaşma bölümü (öğrenme hızı), asimptotik başar�
 
 ---
 
-## 8. Sizin vermeniz gereken kararlar (benim yerime verilemez)
+## 8. Verilen kararlar (kullanıcı, 2026-10-28) ve açık kalanlar
 
-1. **Donanım:** tam-CNS (~160 bin nöron) simülasyonu için GPU'lu bir ortam (dizüstü GPU'nuz ya da bulut) kullanılacak mı? (Bölüm R-H1; ölçek eğrisi bu kararı veriyle destekler.)
-2. **Gerçek zaman:** simülasyon gerçek zamanlı olmak zorunda mı, yoksa 1 sanal sn ≈ birkaç gerçek sn kabul mü? (Mimari seçimi bu cevaba bağlı.)
-3. **300 bin+ hedefi:** bunu *stres testi* olarak mı (önerim) yoksa *bilimsel nesne* olarak mı istiyorsunuz? İkincisi için konsensüs konnektom (seçenek D) gerekir.
-4. **Omurga:** MaleCNS (zaten kurulu, VNC dâhil, erkek) mi, BANC (dişi, VNC dâhil) mi? Önerim MaleCNS; BANC çapraz doğrulama için.
+| Konu | Karar |
+|---|---|
+| **Donanım** | Şimdilik bu bulut ortamı (CPU, GPU yok). Kullanıcı "GPU kullanılacak" dediği anda bu sohbet kapatılacak ve **RTX 3070 Ti Mobile (8 GB VRAM) + 32 GB RAM** kullanılacak. Bu yüzden her şey depoda kendi kendine yeterli olmalı (Bölüm 9). |
+| **Hedef** | Oyun içinde **en hızlı öğrenen ve en akıllı** beyin. İlk sınama alanı oyun; sonra başka testler. |
+| **Nöron sınırı** | **Yok.** Ne kadar gerekirse o kadar; gerekmiyorsa eklenmez. 300 bin+ bir hedef değil, gerekirse bir sonuçtur: 200 bin nöronluk iyi eğitilmiş bir ağ 300 binlik kötü eğitilmişi geçebilir (R-I3, R-9). |
+| **Ayrıntı kararları** | Kullanıcı bana bıraktı: omurga **MaleCNS**; gerçek zamanlılık **şart değil** (deney verimliliği ve tekrarlanabilirlik öncelikli); nöron eklemek ancak ablasyonla fayda gösterirse. |
+| **Rapor** | İş bittiğinde, hangi aşamada olduğumuzu ve hedefi anlatan **tek paragraflık sade metin** (`docs/arkadasa_ozet.md`). |
 
-Sonuçlarla uyuşmayan bir şey fark ederseniz, lütfen bana söyleyin; bu belge ve kararlar defteri canlı belgelerdir.
+Açık kalan tek konu: 300 bin+ ham birleşim **bilimsel** nesne olarak istenirse konsensüs konnektom (seçenek D) gerekir; şimdilik gerekmiyor.
+
+---
+
+## 9. Devir (GPU'ya geçiş) kontrol listesi
+
+GPU'ya geçildiğinde bu sohbet kapanacağı için bağlam **yalnız depoda** yaşar. Geçişten önce yapılacaklar (hepsi `bekliyor`):
+
+1. **Kurulum betiği ve README:** Windows/PowerShell'de sıfırdan kurulum (Python sürümü, `pip install -e .`, CUDA'lı PyTorch), veri indirme, `pytest`, duman testi; her komut çalıştırılarak denenmiş olmalı.
+2. **CUDA yolu duman testi:** kod cihaz-bağımsız yazıldı ama CUDA yolu **bu ortamda sınanmadı** (README). GPU'da `--quick` + küçük Evre 2b koşusu CPU sonuçlarıyla tolerans içinde eşleşmeli (R-H3). Ölçüt: CPU↔GPU aynı tohumda sonuçlar önceden yazılmış toleransta.
+3. **Ölçek eğrisi betiği** (3.0 adımı): 5 bin → 160 bin nöron, adım/sn, RAM, VRAM tablosu; 8 GB VRAM sınırının nereye denk geldiği.
+4. **Yeniden başlatılabilir koşular** (V-03; E-09).
+5. **Devir notu:** `CLAUDE.md` + `karar_defteri.md` + bu belge güncel; sonuçların nerede olduğu (`results/` git'te yok → önemli sonuçların özeti `docs/` içinde).
+6. **Altın koşu:** küçük, deterministik, özeti sabit bir koşu; yeni makinede kurulumun doğru olduğunu tek komutla gösterir.

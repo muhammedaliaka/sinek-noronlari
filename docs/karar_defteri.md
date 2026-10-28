@@ -32,6 +32,7 @@ gerektiğinde geçmişteki benzer kararı hızlıca bulmaktır.
 | K-014 | 10-28 | Güç ızgarası: pilot-benzeri etkide 24×8 tasarımı yalnız %59 güç | **16 deneme** (24×16: %94) | 36×12, 48×8 | `evre2b_plan.md` §4.5; sonuçlar bekleniyor — `bekliyor` | tasarımı kayıttan önce benzetimle sına |
 | K-015 | 10-28 | Kod incelemesi (code-review) bulguları | gerçek hatalar düzeltildi (`--quick` tek sayıda canlı, checkpoint ödülü, E1 tasarım denetimi, test dünyası set_swap); `V2_SET` dondurulmadan v2 koşusu başlamasın diye **koruma** (`3ce0808`, `994b444`) | görmezden gelmek | `doğrulandı` | kayıttan önce bağımsız kod incelemesi |
 | K-016 | 10-28 | Birleştirme/büyütme stratejisi (kullanıcı: 300 bin+ nöron, iki büyük haritayı birleştir) | **Tek omurga (MaleCNS) + hedefli modül + çapraz doğrulama**; ham birleşim yalnız stres testi; iddia nöron sayısına değil ölçülebilir görevlere (`birlestirme_risk_analizi.md`) | ham birleşim | `bekliyor` | sayıyı toplamak organizma yapmaz |
+| K-017 | 10-28 | Kullanıcı kararları: donanım, hedef, nöron sınırı | GPU (RTX 3070 Ti Mobile 8 GB + 32 GB RAM) **şimdilik kullanılmıyor**; kullanıcı "kullanılacak" deyince sohbet kapanır, bu yüzden bağlam depoda olmalı (devir listesi). Hedef: oyunda **en akıllı / en hızlı öğrenen** beyin; **nöron sınırı yok**; ayrıntı kararları bana bırakıldı (omurga MaleCNS; gerçek zaman şart değil). İş bitince tek paragraflık sade özet (`arkadasa_ozet.md`) | sayı hedefi (300 bin+) | `bekliyor` | sayı amaç değil sonuç (R-9) |
 
 ---
 
