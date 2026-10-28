@@ -29,7 +29,7 @@ Her varyantta **kontroller**: (a) tüm yeni bağlantılar sıfır (ablasyon = V0
 * Nöron sayısı başarı ölçütü değildir; bu adım yeni nöron eklemez, mevcut nöronların bağlantı kümesini genişletir.
 
 ## 5. Geliştirme bulguları (2026-10-28; geliştirme tohumları 100–149; KANIT DEĞİL, tasarım ipucu)
-Harness: `sinek.experiments.dan_dev` (tam spiking beyin; 6 canlı × 3 koku çifti; 12 edinim + 8 sönüm; `results/dan_dev/grid1.md`, `grid2.log`, git'te yok). `sel` = V_A − V_B (öğrenmesi kapalı test).
+**Örneklem küçüktür (18 canlı-koku çifti, güven aralığı yok); yalnız yön ve büyüklük sırası okunur.** Harness: `sinek.experiments.dan_dev` (tam spiking beyin; 6 canlı × 3 koku çifti; 12 edinim + 8 sönüm; `results/dan_dev/grid1.md`, `grid2.log`, git'te yok). `sel` = V_A − V_B (öğrenmesi kapalı test).
 
 | varyant | edinim-1 sel | edinim-12 sel | sönüm-8 sel | kararlılık / not |
 |---|---|---|---|---|
@@ -38,13 +38,13 @@ Harness: `sinek.experiments.dan_dev` (tam spiking beyin; 6 canlı × 3 koku çif
 | V2/− (MBON→DAN, glutamat −, g=0,02–0,05) | +0,28…+0,31 | **+0,58…+0,65** | **+0,17…+0,27** | plato V0'dan yüksek, ama sönüm bozuk; DAN tepe 1,3–3,2 |
 | V2/− (g ≥ 0,5) | +0,16…+0,19 | +0,68 → +0,25 (g=8) | +0,43 → +0,20 | kararsız: sahte öğretmen (ödülsüz sunumda DAN etkinliği) 0,56…5,7; DAN tepe 32…515 |
 | V2/+ (glutamat +, g=0,02) | +0,42 | +0,78 (edinim 8: +0,81) | +0,45 | en hızlı ve en yüksek plato, sönüm bozuk |
-| V2/+ (g ≥ 0,5) | düşer | ≈ 0 | ≈ 0 | sahte öğretmen 1,4…13,9: öğrenmeyi yok eder |
+| V2/+ (g ≥ 0,5) | +0,28 → +0,05 | +0,18 → +0,01 | +0,08 → 0,00 | sahte öğretmen 1,4…13,9: öğrenmeyi yok eder |
 | V3 (elle δ yok) | +0,10…+0,13 | +0,45 / +0,05 | +0,34 / +0,02 | glutamat − için işe yarar, + için çöker; sönüm bozuk |
-| derece-koruyan kontrol (g=2) | +0,19 | +0,24 / +0,05 | ≈0 | gerçek bağlantı kontrolden ayrışıyor (glutamat −), ama kararsız bölgede |
+| derece-koruyan kontrol (g=2; tek karıştırma tohumu) | +0,19 | +0,24 / +0,05 (−/+) | −0,04 / +0,00 | gerçek bağlantı kontrolden ayrışıyor (glutamat −: 0,44 vs 0,24), ama kararsız bölgede |
 
 **Okuma (dürüst):**
 1. Elle yazılmış δ (V0) zaten hızlı ve kararlıdır; V1 hiçbir şey eklemez. "Hata sinyali veriden türetildi" iddiası için adayların hepsi ya kararsızdır (g ≥ 0,5) ya sönümü bozar (düşük g). **Kapı 3.3 şu an karşılanmadı**; plan ölçütleri bu yüzden KESİNLEŞTİRİLMEDİ.
-2. Düşük kazançta (g=0,02–0,05) MBON→DAN geri beslemesi platoyu yükseltiyor (0,41 → 0,58–0,81) fakat sönümü bozuyor (0,01 → 0,17–0,45). Bu, "tahmin hatasının iki yönü"nden yalnız pozitif yarısının (PAM) çalıştığına işaret eder; PPL1 (ceza/sönüm) yolu bağlantı verisinden henüz gelmiyor. Sonraki geliştirme sorusu: sönüm için PPL1'e giden MBON→DAN işaretinin (glutamat varsayımı) ve ek bir iç-nöron aracılığının (R-8 bölüm D: %32 aracı girdi) eklenmesi.
+2. Düşük kazançta (g=0,02–0,05) MBON→DAN geri beslemesi platoyu yükseltiyor (0,41 → 0,58–0,81) fakat sönümü bozuyor (0,01 → 0,17–0,45). Olası açıklama (SINANMADI, hipotez): "tahmin hatasının iki yönü"nden yalnız pozitif yarısı (PAM) çalışıyor; PPL1 (ceza/sönüm) yolu bağlantı verisinden henüz gelmiyor. Sonraki geliştirme sorusu: sönüm için PPL1'e giden MBON→DAN işaretinin (glutamat varsayımı) ve ek bir iç-nöron aracılığının (R-8 bölüm D: %32 aracı girdi) eklenmesi.
 3. Kararlılık kapısı (yeni, K-028 ile birlikte): her varyant için "ödülsüz sunumda sahte öğretmen < 0,05 ve DAN tepe < 3×V0" koşulu **sönümden önce** sınanır; kararsız bölgedeki sonuçlar (g ≥ 0,5) değerlendirmeye alınmaz.
 
 ## 6. Ölçek ekseninin önceliği (K-028)
