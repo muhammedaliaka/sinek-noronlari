@@ -21,6 +21,7 @@ class Thr:
     delta_eq: float = 0.10       # eşdeğerlik / aşağı-tarafsızlık marjı — aday
     alpha: float = 0.01
     ref_min: float = 0.80        # referans karşılaştırıcı çözülebilirlik kapısı
+    attract_mult: float = 2.0    # O4 çekim odası kapısı: frozen − anosmik ≥ attract_mult·δ (ön-kayıtta güç türetmesiyle dondurulur)
     anos_lo: float = 0.15        # anosmik (kör) düzey penceresi (O1)
     anos_hi: float = 0.45
     n_boot: int = 4000
@@ -88,9 +89,9 @@ def eval_o3(h: dict, thr: Thr, extra_gates: dict | None = None) -> dict:
 
 
 def eval_o4a(h: dict, thr: Thr, extra_gates: dict | None = None) -> dict:
-    """O4a (sönüm). Kollar: plastic, frozen, anosmic: decoy'a isabet. G4: frozen−anosmik ≥ 2δ (çekim odası)."""
+    """O4a (sönüm). Kollar: plastic, frozen, anosmic: decoy'a isabet. G4: frozen−anosmik ≥ attract_mult·δ (çekim odası)."""
     T = np.asarray(h["frozen"]).shape[1]
-    att = _superior(h["frozen"], h["anosmic"], T, thr, delta=2 * thr.delta, seed=2)
+    att = _superior(h["frozen"], h["anosmic"], T, thr, delta=thr.attract_mult * thr.delta, seed=2)
     gates = {"G4_cekim_odasi": bool(att["passed"]), **(extra_gates or {})}
     crit = {"P1_plastic<frozen": _superior(h["plastic"], h["frozen"], T, thr, less=True)}
     r = _result(gates, crit)
@@ -104,7 +105,7 @@ def eval_o4c(slots: dict, thr: Thr, extra_gates: dict | None = None) -> dict:
     T = np.asarray(slots["frozen"]).shape[1]
     dec = {k: (np.asarray(v) == 1).astype(int) for k, v in slots.items()}
     real = {k: (np.asarray(v) == 0).astype(int) for k, v in slots.items()}
-    att = _superior(dec["frozen"], dec["anosmic"], T, thr, delta=2 * thr.delta, seed=2)
+    att = _superior(dec["frozen"], dec["anosmic"], T, thr, delta=thr.attract_mult * thr.delta, seed=2)
     gates = {"G4_cekim_odasi": bool(att["passed"]), **(extra_gates or {})}
     p1 = _superior(dec["plastic"], dec["frozen"], T, thr, less=True)
     m, lo, hi = paired_cluster_ci(_sums(real["plastic"]), _sums(real["anosmic"]), T, n=thr.n_boot, alpha=2 * thr.alpha, seed=3)

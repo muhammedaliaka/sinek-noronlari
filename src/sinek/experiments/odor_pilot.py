@@ -40,9 +40,11 @@ def main(argv=None) -> dict:
     ap.add_argument("--seconds", type=float, default=25.0)
     ap.add_argument("--set", action="append", default=[], metavar="YUVA.ALAN=DEĞER",
                     help="oyun parametresi geçersiz kılma, ör. target.width=3 (yalnız pilot; sonuç dosyasına yazılır)")
+    ap.add_argument("--slot", type=int, default=None, help="isabet yuvası (varsayılan: O4 için 1=decoy, diğerleri 0=hedef)")
     ap.add_argument("--threads", type=int, default=None)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
+    slot = a.slot if a.slot is not None else (1 if a.game in ("O4a", "O4c") else 0)
     if a.threads:
         torch.set_num_threads(a.threads)
     t0 = time.time()
@@ -59,14 +61,14 @@ def main(argv=None) -> dict:
     for arm in arms:
         c = make_game_creature(pre, a.game, arm, agents, a.trials, a.seed, spec=spec)
         res[arm] = play(c, a.seconds, learn=False, test=True, n_agents=len(agents))
-        h = hits(res[arm])
+        h = hits(res[arm], slot)
         print(f"[{time.time() - t0:6.0f}s] {a.game} {arm:<10} p_hit={h.mean():.3f}", flush=True)
     L = [f"# Pilot: {a.game} (tohum {a.seed}, ön-eğitim {a.pre})", "",
          f"Pilot — kanıt değildir. {len(agents)} canlı x {a.trials} deneme, süre sınırı {a.seconds:.0f} sn, kollar CRN eşli.", "",
          "| kol | p_hit [%95 GA] | koku alan (alan>0) | ort. süre (isabetler) | ort. yol (isabetler) |", "|---|---|---|---|---|"]
     summary = {}
     for arm in arms:
-        o, h = res[arm], hits(res[arm])
+        o, h = res[arm], hits(res[arm], slot)
         m, lo, hi = _rate(h)
         seen = float((o["first_odor_step"] >= 0).mean())
         tm = float(np.nanmean(np.where(h == 1, o["time"], np.nan))) if h.any() else float("nan")
@@ -79,7 +81,7 @@ def main(argv=None) -> dict:
     for arm in arms:
         if arm == base:
             continue
-        m, lo, hi = paired_cluster_ci(hits(res[arm]).sum(1), hits(res[base]).sum(1), a.trials, n=4000, alpha=0.01)
+        m, lo, hi = paired_cluster_ci(hits(res[arm], slot).sum(1), hits(res[base], slot).sum(1), a.trials, n=4000, alpha=0.01)
         L.append(f"- {arm} − {base}: {m:+.3f} [{lo:+.3f}, {hi:+.3f}]")
         paired[arm] = [m, lo, hi]
     leak = None
@@ -92,7 +94,7 @@ def main(argv=None) -> dict:
     if "anosmic" in res:
         L += ["", "## Ayna yarıları (özgün / ayna) p_hit", ""]
         for arm in arms:
-            h = hits(res[arm])
+            h = hits(res[arm], slot)
             L.append(f"- {arm}: {h[:, 0::2].mean():.3f} / {h[:, 1::2].mean():.3f}")
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)

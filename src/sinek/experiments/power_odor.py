@@ -60,8 +60,11 @@ def scenarios(game: str, thr: Thr, p0: float, pa: float, ref: float) -> list[tup
                 (f"D sapması = δ_eq ({e})", {**eq, "D": p0 + e}), (f"D sapması = 2δ_eq ({2 * e})", {**eq, "D": p0 + 2 * e})]
     if game == "O4a":
         base = {"frozen": pa, "anosmic": p0}
+        A = pa - p0                                  # çekim odası (frozen − anosmik)
         return [("sıfır etki (plastic=frozen)", {**base, "plastic": pa}), (f"etki δ={d}", {**base, "plastic": pa - d}),
-                (f"etki 1,5δ={1.5 * d:.3f}", {**base, "plastic": pa - 1.5 * d}), (f"etki 2δ={2 * d}", {**base, "plastic": pa - 2 * d}),
+                (f"etki 1,5δ={1.5 * d:.3f}", {**base, "plastic": pa - 1.5 * d}),
+                (f"yarım sönüm (−A/2={A / 2:.3f})", {**base, "plastic": pa - A / 2}),
+                (f"TAM sönüm (plastic=anosmik düzey, −A={A:.3f})", {**base, "plastic": p0}),
                 ("çekim yok (G4 başarısız olmalı)", {"frozen": p0, "anosmic": p0, "plastic": p0 - d})]
     if game == "O4c":
         pr = 0.15
@@ -104,17 +107,18 @@ def main(argv=None) -> None:
     ap.add_argument("--het", type=float, default=0.0, help="canlıya özgü etki yayılımı (göreli) — pilottan")
     ap.add_argument("--ref-min", type=float, default=0.80, help="doğrulayıcıda referans kapısı (O2'de tasarım-zamanı G1 ayrı ve büyük örnekle)")
     ap.add_argument("--append", action="store_true", help="--out varsa sonuna ekle")
+    ap.add_argument("--attract-mult", type=float, default=2.0, help="O4 çekim odası kapısı çarpanı (frozen−anosmik ≥ çarpan·δ)")
     ap.add_argument("--delta", type=float, default=0.15)
     ap.add_argument("--delta-eq", type=float, default=0.10)
     ap.add_argument("--boot", type=int, default=1000)
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
-    thr = Thr(delta=a.delta, delta_eq=a.delta_eq, ref_min=a.ref_min, n_boot=a.boot, n_perm=a.boot)
+    thr = Thr(delta=a.delta, delta_eq=a.delta_eq, ref_min=a.ref_min, attract_mult=a.attract_mult, n_boot=a.boot, n_perm=a.boot)
     t0 = time.time()
     L = ([] if a.append else ["# Dört koku oyunu: güç ve yanlış-pozitif benzetimi", ""]) + [
          f"Koşu: {a.games} — gerçek değerlendirici işlevlerle (`odor_eval`), {a.sims} benzetim/senaryo, {a.agents} canlı × {a.trials} deneme.",
          f"Girdi parametreleri (pilottan; yer tutucu olabilir): kör düzey p0={a.p0}, çekim p={a.p_attract}, referans={a.ref}, "
-         f"canlı sd={a.creature_sd}, kol ayrışma oranı={a.indep}, etki yayılımı={a.het}; δ={a.delta}, δ_eq={a.delta_eq}, α={thr.alpha}, referans kapısı ≥{a.ref_min}.", ""]
+         f"canlı sd={a.creature_sd}, kol ayrışma oranı={a.indep}, etki yayılımı={a.het}; δ={a.delta}, δ_eq={a.delta_eq}, α={thr.alpha}, referans kapısı ≥{a.ref_min}, çekim kapısı ≥{a.attract_mult}δ.", ""]
     for g in a.games.split(","):
         L += [f"## {g}", "", "| senaryo | hepsi geçti | kapılar tamam | ölçüt başına geçme |", "|---|---|---|---|"]
         for r in run(g, thr, a.sims, a.agents, a.trials, a.p0, a.p_attract, a.ref, a.creature_sd, a.indep, a.het):
