@@ -143,6 +143,8 @@ Birim canlıdır; her canlı için kol başına isabet sayısı. Eşli fark `d_i
 ### 5.3 Güç ve yanlış-pozitif (R-6)
 `power_odor.py`: gerçek değerlendirici fonksiyonla; senaryolar: tümü sıfır etki, O1/O2/O4 bilinen etki (δ civarı ve 2δ), O3 sıfır + δ_eq'e eşit sapma. Sonuç `docs/odor_guc_analizi.md`'ye yazılır; **ön-kayıttan önce**.
 
+**Ön bulgu (K-022, `tests/test_odor_eval.py`):** O3 eşdeğerliği kolların CRN ile ortak izde olmasına dayanır; bağımsız kollarda δ_eq=0,10 ve 24×16 tasarımında sıfır etkide geçme ≈%10'dur. Bu yüzden O3 pilotunda kol ayrışma oranı ölçülür ve benzetim o gürültü düzeyiyle koşulur; marj değil tasarım (canlı/deneme sayısı) ayarlanır. Değerlendiriciler: `src/sinek/experiments/odor_eval.py` (`eval_o1/o2/o3/o4a/o4c`).
+
 ---
 
 ## 6. Elle yazılmış parçalar (R-11)

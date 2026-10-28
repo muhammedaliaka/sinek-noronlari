@@ -37,6 +37,7 @@ gerektiğinde geçmişteki benzer kararı hızlıca bulmaktır.
 | K-019 | 10-28 | Kullanıcı dört koku oyunu taslağı getirdi (O1 iz, O2 yalnız final, O3 yalnız temas, O4 yanıltıcı) ve eksikleri düzeltip işe koyulmamı istedi | Taslak değişmeden `docs/girdi/` altında saklandı; kodla karşılaştırılıp **24 bulgu** (Z-01…Z-24) çıkarıldı; bağlayıcı sürüm `docs/dort_koku_oyunu_plani.md`. Başlıca değişiklikler: O3 üstünlük değil **eşdeğerlik/kör temel çizgi**; süre sınırı kör başarıya göre ayarlanır (60 sn → tavan); O1 izi boylamsal gradyanlı + referans karşılaştırıcı kapısı; engel/rüzgâr/UI ertelendi | taslağı olduğu gibi uygulamak | `bekliyor` (uygulama G0'dan başlar) | plan da bir ölçümdür: kayıttan önce kodla ve hesapla karşılaştır (E-11) |
 | K-020 | 10-28 | Oyun kolları nasıl eşlenecek? | **CRN (ortak rastgele sayı) eşleştirmesi:** koku açık ve koku kapalı (anosmik) kollar aynı canlı/yerleşim/gürültü ile koşar; ilk gerçek koku alımına dek yörüngeler **bit-bit aynı** olmalı (sızıntı denetimi). Gürültü ve yerleşim ayrı RNG akışları | bağımsız örneklemler + istatistiksel eşdeğerlik | `bekliyor` | sızıntıyı istatistikle değil değişmezle yakala |
 | K-021 | 10-28 | Taslakta duyu katmanı (ORN/anten lobu) oyunlardan önce (§7.2/§12) ama §17 önce prototip diyor | Oyunlar **mevcut doğrudan-glomerül (L0)** girişte koşar; gerçekçi duyu katmanı ayrı, ön-kayıtlı karşılaştırma olarak sonra | önce duyu katmanı | `bekliyor` | regresyon riskini azalt: bir seferde bir değişken |
+| K-022 | 10-28 | Oyun değerlendiricileri (`odor_eval.py`) yazılırken: O3 eşdeğerliği (δ_eq=0,10, 24 canlı × 16 deneme) kollar **bağımsız** olsaydı sıfır etkide bile yalnız ≈%10 geçiyor (benzetim); kollar CRN ile çoğunlukla ortak izdeyse ≈%95-100 | O3 anlamı CRN eşleşmesine bağlı; O3 pilotunda **kol ayrışma oranı** (kolların aynı denemede farklı sonuç verdiği oran) ölçülür ve güç analizi (G4) bununla koşulur; δ_eq ve canlı sayısı **ölçütü gevşetmeden** tasarımla (canlı/deneme artırarak) ayarlanır | δ_eq'i güç yetsin diye büyütmek | `bekliyor` (pilot O3) | eşdeğerlik testi güç ister: önce güç, sonra marj (R-6); testler: `tests/test_odor_eval.py` |
 
 ---
 
@@ -96,3 +97,9 @@ gerektiğinde geçmişteki benzer kararı hızlıca bulmaktır.
 | `994b444` | 2026-10-28 | Evre 2b: hareket okuması dondurulmadan v2 koşusu başlamasın (koruma + test) |
 | `bc60d80` | 2026-10-28 | Evre 2b: güç analizi belgesi (senaryolar ve tasarım ızgarası) |
 | `aed8716` | 2026-10-28 | Evre 2b: plan KESİNLEŞTİ (kazanç 60, 16 deneme, V2_SET donduruldu), prova sonuçları, dondurma testi |
+| `8b3edcb` | 2026-10-28 | Birleştirme/büyütme risk analizi, karar defteri (hata sicili + değişmez kurallar + değişiklik günlüğü), CLAUDE.md |
+| `7002de0` | 2026-10-28 | Kullanıcı kararları kaydedildi (donanım, hedef, nöron sınırı yok), devir kontrol listesi, arkadaş için sade özet taslağı |
+| `cd51319` | 2026-10-28 | Evre 2b sonuçları: tohum 30 ve 31'de 7/7 ve 7/7; README, karar defteri ve özet güncellendi (E1 sürüyor) |
+| `ff94c3e` | 2026-10-28 | Dört koku oyunu: kullanıcı taslağı kaydedildi, kodla karşılaştırılıp 24 bulgulu bağlayıcı plan (v1), kör gezgin hesabı, K-019..K-021/E-11 |
+| `33eb549` | 2026-10-28 | Dört koku oyunu G0-G2: GameWorld (sonlu destekli alanlar, temas sırası, ayrı RNG akışları, CRN), referans karşılaştırıcı, eşli istatistikler, S0 regresyon testi |
+| `dc7150c` | 2026-10-28 | Oyun protokolü: ön-eğitim, CRN eşli kollar, sızıntı denetimi, oturum koşucuları, pilot ve ön-eğitim komutları; akışlar (tohum, bölüm) işlevi |

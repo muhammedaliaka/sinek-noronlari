@@ -201,7 +201,9 @@ src/sinek/
   agent.py         beyin + hareket (şeffaflık notu başlıkta)
   checkpoint.py    bellek kaydet/yükle (iki beyin türü için)
   connectome/      MaleCNS indirme (doğrulamalı), alt ağ çıkarma, model verisi, denetim raporu
-  experiments/     protocol.py (eğitim, test, istatistik), evre1.py, evre2.py, evre2_posthoc.py, plots.py
+  experiments/     protocol.py (eğitim, test, istatistik), evre1.py, evre2.py, evre2b*.py, evre2_posthoc.py, plots.py;
+                   dört koku oyunu: odor_pretrain.py, odor_pilot.py, odor_session.py, games_blind_check.py
+  games/           dört koku oyunu: sonlu destekli koku alanları, GameWorld, referans karşılaştırıcı, protokol (docs/dort_koku_oyunu_plani.md)
 data/              çıkarılan mantar cismi alt ağı (processed/), ham veri indirilir (raw/, gitignore)
 tests/             birim ve davranış testleri
 docs/              proje raporu, plan, sonuçlar, veri denetimi

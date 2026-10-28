@@ -56,8 +56,11 @@ def pretrain(cfg: Config, patterns: torch.Tensor, agents: int, seed: int, episod
     return creature
 
 
+O3_ARMS = {"A": (True, True), "B": (True, False), "C": (False, True), "D": (False, False)}   # (hedefte ödül, hedefte koku)
+
+
 def make_game_creature(pre: Creature, game: str | GameSpec, arm: str, agents: Sequence[int], trials: int, seed: int,
-                       spec: GameSpec | None = None) -> Creature:
+                       spec: GameSpec | None = None, o3: str | None = None) -> Creature:
     """Ön-eğitimli canlılardan (her biri `trials` kez kopyalanır) oyun koşusu kurar. Eleman = canlı·trials + deneme.
 
     `trials` çift olmalı: ardışık deneme çiftleri aynı yerleşimin ayna çiftidir.
@@ -80,6 +83,9 @@ def make_game_creature(pre: Creature, game: str | GameSpec, arm: str, agents: Se
         brain.eta_scale = torch.full((B,), a.eta, device=world.device)
     creature.turn_gain = torch.full((B,), cfg.motor.turn_gain if a.gain is None else a.gain, device=world.device)
     world.set_anosmic(torch.full((B,), a.anosmic))
+    if o3 is not None:
+        r_on, o_on = O3_ARMS[o3]
+        world.set_arms(torch.full((B,), r_on), torch.full((B,), o_on))
     return creature
 
 
