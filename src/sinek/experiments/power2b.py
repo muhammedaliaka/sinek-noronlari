@@ -98,12 +98,37 @@ SCENARIOS = [
 ]
 
 
+# Geliştirme pilotlarına benzeyen etki (eğitilmiş ~0.72, tersine çevrilmiş ~0.40; canlılar arası aşırı yayılım gözlenmedi: pilotlarda
+# gözlenen/iki terimli varyans oranı 0.4-1.5, ortalama ~0.8 => κ çok büyük) için tasarım ızgarası.
+PILOT_LIKE = dict(kappa=1e6, r_naive=0.55, r_trained=0.88, r_reversed=0.80, r_random=0.65, odor_bias=0.10)
+DESIGN_GRID = [(24, 8), (36, 8), (48, 8), (24, 16), (36, 12)]
+EFFECTS = [(0.76, 0.36), (0.72, 0.40), (0.68, 0.42)]
+
+
+def design_table(sims: int, seed: int) -> str:
+    L = ["| eğitilmiş → tersine | tasarım (canlı × deneme) | G | A1 | A2 | A3 | B1 | B2 | **hepsi** |", "|---|---|---:|---:|---:|---:|---:|---:|---:|"]
+    for pt, pr in EFFECTS:
+        for ag, tr in DESIGN_GRID:
+            r = simulate(Scenario("x", agents=ag, trials=tr, p_trained=pt, p_reversed=pr, **PILOT_LIKE), sims, seed)
+            L.append(f"| {pt:.2f} → {pr:.2f} | {ag} × {tr} | " + " | ".join(f"{r[k]:.2f}" for k in ["G", "A1", "A2", "A3", "B1", "B2"])
+                     + f" | **{r['hepsi']:.2f}** |")
+            print(L[-1], flush=True)
+    return "\n".join(L) + "\n"
+
+
 def main(argv=None) -> str:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--sims", type=int, default=300)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--design", action="store_true", help="senaryo tablosu yerine tasarım ızgarasını (pilot benzeri etkiler) üret")
     a = ap.parse_args(argv)
+    if a.design:
+        md = design_table(a.sims, a.seed)
+        if a.out:
+            from pathlib import Path
+            Path(a.out).write_text(md)
+        return md
     L = [f"| senaryo | G | A1 | A2 | A3 | B1 | B2 | **hepsi** |", "|---|---:|---:|---:|---:|---:|---:|---:|"]
     for s in SCENARIOS:
         r = simulate(s, a.sims, a.seed)
