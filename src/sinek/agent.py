@@ -31,6 +31,8 @@ class Creature:
             self.world.reset_choice()
         elif mode == "game":     # oyun dünyaları (sinek.games): yerleşim kendi RNG akışından
             self.world.reset_game(**kw)
+            if hasattr(self.brain, "gen") and hasattr(self.brain, "seed"):   # CRN: beyin akışı da (tohum, bölüm) işlevi
+                self.brain.gen.manual_seed(self.brain.seed + 7 + 7919 * (self.world.episode - 1))
         else:
             raise ValueError(mode)
         self.brain.reset_state()

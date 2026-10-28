@@ -262,3 +262,15 @@ def test_blind_agents_match_independent_numpy_simulation(cfg):
     # ayna simetrisi: ayna yarılarında kör başarı eşit (duvar gizli işaret olmasın, Z-04)
     hit = (w.first_contact_slot >= 0).float()
     assert abs(float(hit[0::2].mean()) - float(hit[1::2].mean())) < 0.05
+
+
+def test_streams_are_functions_of_seed_and_episode_not_of_consumption(cfg):
+    """CRN: kollar farklı sürelerde bitse bile sonraki bölümün gürültü/yerleşim akışı aynıdır."""
+    a, b = make(cfg, "O1a", batch=4, seed=8, brain="snn"), make(cfg, "O1a", batch=4, seed=8, brain="snn")
+    a.run(3.0, learn=False, stop_when_done=True)
+    b.run(1.0, learn=False, stop_when_done=True)           # farklı tüketim
+    a.reset_episode("game", test=True); b.reset_episode("game", test=True)
+    assert torch.equal(a.world.layout_gen.get_state(), b.world.layout_gen.get_state())
+    assert torch.equal(a.world.noise_gen.get_state(), b.world.noise_gen.get_state())
+    assert torch.equal(a.world.pos, b.world.pos) and torch.equal(a.brain.gen.get_state(), b.brain.gen.get_state())
+    assert a.world.episode == 3                              # kurucu + iki sıfırlama... bir sonraki bölüm no 3

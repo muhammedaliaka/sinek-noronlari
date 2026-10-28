@@ -21,14 +21,19 @@ REARM_MARGIN = 1.0   # temastan sonra kaynak, canlı temas yarıçapı+bu kadar 
 
 class GameWorld(World):
     def __init__(self, cfg: WorldConfig, spec: GameSpec, batch: int, seed: int, device: str = "cpu",
-                 patterns: torch.Tensor | None = None):
+                 patterns: torch.Tensor | None = None, swap: torch.Tensor | None = None):
+        """`swap`: eleman başına rol dengelemesi (True: ödüllü koku = koku 1); ilk yerleşimden önce uygulanır."""
         if batch % 2:
             raise ValueError("ayna çiftleri için batch çift olmalı")
         super().__init__(cfg, batch, seed, device, patterns)
+        if swap is not None:
+            self.set_swap(swap)
         self.spec = spec
-        # ayrı RNG akışları (Z-09): yerleşim yalnız sıfırlamada, hareket gürültüsü adım başına B sayı
-        self.layout_gen = torch.Generator(device=self.device).manual_seed(seed + 101)
-        self.noise_gen = torch.Generator(device=self.device).manual_seed(seed + 202)
+        # ayrı RNG akışları (Z-09). Her bölümün başında ikisi de (tohum, bölüm numarası) işlevi olarak yeniden tohumlanır:
+        # erken bitiş (stop_when_done) gibi sonuca bağlı tüketim farkları kollar arasındaki ortak rastgele sayıları (CRN) bozamaz.
+        self._seed, self.episode = seed, 0
+        self.layout_gen = torch.Generator(device=self.device)
+        self.noise_gen = torch.Generator(device=self.device)
         z = torch.zeros(1, cfg.n_glom, device=self.device)
         self.pattern_ext = torch.cat([self.patterns, z])             # son satır: kokusuz (−1 dizini)
         self.anosmic = torch.zeros(batch, dtype=torch.bool, device=self.device)
@@ -60,6 +65,9 @@ class GameWorld(World):
         if test is not None:
             self.test_mode = bool(test)
         B, dev, sp = self.B, self.device, self.spec
+        self.layout_gen.manual_seed(self._seed + 101 + 7919 * self.episode)
+        self.noise_gen.manual_seed(self._seed + 202 + 7919 * self.episode)
+        self.episode += 1
         lay = make_layout(sp, self.cfg, B, self.layout_gen, dev)
         self._alloc(n_src=2)
         self.pos = lay["start"].clone()
