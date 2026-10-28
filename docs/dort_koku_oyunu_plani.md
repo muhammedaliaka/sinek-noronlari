@@ -165,8 +165,8 @@ Sabit ileri hız; "yüksek değerli antene dön" kontrast kuralı (ε=2,0, kazan
 | G0 / S0 | Eski `World` + `Creature` davranışının **bit-bit** korunması (regresyon) | **tamam**: `agent.py` değişikliğinden önce/sonra aynı özet (sentetik `008a03d53b45c166`, bağlantı-tabanlı `a5eb9525e58a5bfa`, bu makinede); kalıcı test `tests/test_s0_regression.py` (takma ad yolu bit-bit eşit) |
 | G1 | Oyun fiziği birim testleri: sıfır-sızıntı, temas sırası, yerleşim değişmezleri, RNG ayrımı, bilgi sınırı casusu, CRN | **tamam**: `src/sinek/games/` + `tests/test_games_world.py` (tam test paketi geçti) |
 | G2 | Kör temel çizgi (World fiziğiyle uyumlu) + referans karşılaştırıcı çözülebilirliği | **tamam (ilk bakış, T=25 sn, dev tohumu 101, 400 deneme)**: kör ≈0,30; referans O1R 0,82 · O1a 0,96 · O1b 0,94 · O2tam 0,70 · O2yakın 0,83; anosmik = kör (CRN). Kör gezgin iki bağımsız uygulamada uyuşuyor (testle) |
-| G3 | Pilot (dev tohumları): T, W, λ, R seçimi; sıfır-koku dönüş yanlılığı tanısı | bekliyor |
-| G4 | `power_odor.py` + `docs/odor_guc_analizi.md` | bekliyor |
+| G3 | Pilot (dev tohumları): T, W, λ, R seçimi; sıfır-koku dönüş yanlılığı tanısı | **araçlar hazır** (`odor_pretrain`, `odor_pilot`, `odor_session`, `odor_bias`); dev ön-eğitimi (tohum 100) sürüyor, pilot koşuları sonra |
+| G4 | `power_odor.py` + `docs/odor_guc_analizi.md` | **araç hazır** (`odor_eval.py` değerlendiriciler + `power_odor.py` benzetim, testli); parametreler pilottan gelince koşulur |
 | G5 | Oyun-başına ön-kayıt commit | bekliyor |
 | G6 | Doğrulayıcı koşular (O1→O2→O3→O4) | bekliyor |
 | M1 | Yeni devre kapısı: kısa süreli yön belleği / sistematik keşif — O3/O4c boş sonuçta veya O1c için | **kapsam dışı (şimdilik)** |
