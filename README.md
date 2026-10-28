@@ -159,6 +159,9 @@ Nörotransmitter değerleri sınıflandırıcı tahminidir, ölçüm değildir.
 (`step(glom, taste, touch, learn)` → değer, `state_dict`) arkasında verir; dünya, ajan ve deney kodu iki evrede de aynıdır.
 Açık kalan: Evre 2'de ölçüt gücünü artırmak (eğitimsiz ağın az seçim yapması), MBON→DAN geri beslemesi ve diğer MB alt ağları.
 
+Büyütme/birleştirme aşaması için hazırlık: [`docs/birlestirme_risk_analizi.md`](docs/birlestirme_risk_analizi.md) (uzman-panel riskleri, yedek planlar, kapılar) ·
+kararlar, hata sicili ve değişiklik günlüğü: [`docs/karar_defteri.md`](docs/karar_defteri.md).
+
 ## Yapı
 
 ```
