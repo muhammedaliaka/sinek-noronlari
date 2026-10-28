@@ -76,6 +76,7 @@ def main(argv=None) -> None:
     ap.add_argument("--seed", type=int, required=True)
     ap.add_argument("--ks", default="1,2,4")
     ap.add_argument("--oracle", action="store_true", help="K→∞ üst sınırı: gürültüsüz değer tablosu ile frozen kol")
+    ap.add_argument("--tau", type=float, default=None, help="tau_valence geçersiz kıl (okuma entegrasyon süresi, sn); yalnız geliştirme")
     ap.add_argument("--agents", type=int, default=24)
     ap.add_argument("--trials", type=int, default=8)
     ap.add_argument("--seconds", type=float, default=25.0)
@@ -86,6 +87,8 @@ def main(argv=None) -> None:
         raise SystemExit("ölçek geliştirmesi doğrulayıcı tohumlarıyla (≥200) çalıştırılamaz")
     torch.set_num_threads(a.threads)
     pre = checkpoint.load(a.pre)
+    if a.tau is not None:
+        pre.brain.cfg.tau_valence = a.tau
     agents = list(range(min(a.agents, pre.world.B)))
     t0 = time.time()
     h_an, _ = _hits(pre, a.game, "anosmic", agents, a.trials, a.seed, a.seconds)
@@ -113,7 +116,7 @@ def main(argv=None) -> None:
         rows.append(f"| {k} | {h.mean():.3f} | {m:+.3f} [{lo:+.3f}, {hi:+.3f}] | {np.mean(h_ref) - h.mean():+.3f} |")
         print(f"[{time.time() - t0:5.0f}s] K={k}: {rows[-1]}", flush=True)
     text = "\n".join([f"# Ölçek eğrisi (geliştirme; kanıt değildir): {a.game}, oyun tohumu {a.seed}", "",
-                      f"{len(agents)} canlı × {a.trials} deneme; anosmik {h_an.mean():.3f}, referans {h_ref.mean():.3f}.", "",
+                      f"{len(agents)} canlı × {a.trials} deneme; tau_valence={pre.brain.cfg.tau_valence}; anosmik {h_an.mean():.3f}, referans {h_ref.mean():.3f}.", "",
                       "| K (anten başına kopya) | frozen p_hit | frozen − anosmik [%99 GA] | referansa uzaklık |", "|---|---|---|---|"] + rows) + "\n"
     print(text)
     if a.out:
