@@ -43,3 +43,14 @@ def test_checkpoint_keeps_swap_and_behaviour(cfg, tmp_path):
     a = P.choice_test(c, trials=2, seconds=8.0, seed=99)
     b = P.choice_test(r, trials=2, seconds=8.0, seed=99)
     assert np.array_equal(a.n_a, b.n_a) and np.array_equal(a.n_b, b.n_b)
+
+
+def test_swap_mask_is_balanced_and_requires_even_agents():
+    import pytest
+    from sinek.experiments.evre1 import _swap_mask
+
+    m = _swap_mask(4, 3, True).reshape(3, 4)
+    assert m.sum(1).tolist() == [2, 2, 2] and not m[:, :2].any() and m[:, 2:].all()
+    assert not _swap_mask(5, 3, False).any()
+    with pytest.raises(ValueError):
+        _swap_mask(5, 3, True)

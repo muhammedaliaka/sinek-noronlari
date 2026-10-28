@@ -7,7 +7,9 @@ Evre 2 v1'den farkları (nedenleri ve ön-kayıtlı karar kuralları plan belges
   * koku kimliği dengelemesi (`--swap-roles`): her koşulda canlıların yarısında A rolü koku 1'dir;
   * seçim sayısı ağırlıklı, canlı-düzeyi (küme) bootstrap / permütasyon istatistikleri (`stats.py`);
   * G geçerlilik kapısı: eğitimsiz ve eğitilmiş seçim oranı >= 0.40 değilse A2/A3 değerlendirilemez (FAIL sayılır);
-  * eğitimsiz karşılaştırma için `plastic` + `frozen` (aynı ağ) havuzlanır.
+  * eğitimsiz karşılaştırma için `plastic` + `frozen` (aynı ağ) havuzlanır;
+  * A3 "GA 0.5'i kapsar" yerine eşdeğerlik ölçütüdür (GA [0.30, 0.70] içinde; marj = ilgilendiğimiz en küçük etki): "kapsar" biçimi, yanlılık olmasa bile
+    her koşuda ~%5 kendiliğinden başarısız olur ve veri arttıkça önemsiz yanlılıkta da başarısız olmaya yaklaşır (güç analizi: power2b.py).
 """
 from __future__ import annotations
 
@@ -19,6 +21,7 @@ from .stats import cluster_bootstrap_ci, cluster_permutation_p, pooled_fraction
 
 ALPHA = 0.01
 GATE_MIN_RATE = 0.40
+NAIVE_EQUIV = (0.30, 0.70)     # A3: eğitimsiz rol tercihinin %95 GA'sı bu aralığın içinde olmalı (ihmal edilebilir yanlılık)
 STAT_SEED = 0
 
 
@@ -76,8 +79,8 @@ def evaluate2(stages, a, conds, persisted: bool) -> dict:
                                 + ("" if gate else " — G başarısız: değerlendirilemez"))}
 
     f_nv, nlo, nhi = cluster_bootstrap_ci(*naive_pool, seed=STAT_SEED)
-    v["A3 eğitimsiz canlının rol tercihi yok (plastic+frozen havuzlanmış, GA 0.5'i kapsar; G gerekli)"] = {
-        "pass": bool(gate and nlo <= 0.5 <= nhi),
+    v["A3 eğitimsiz canlının rol tercihi ihmal edilebilir (plastic+frozen havuzlanmış, %95 GA ⊂ [0.30, 0.70]; G gerekli)"] = {
+        "pass": bool(gate and nlo >= NAIVE_EQUIV[0] and nhi <= NAIVE_EQUIV[1]),
         "detail": f"eğitimsiz {f_nv:.2f} [{nlo:.2f}, {nhi:.2f}]" + ("" if gate else " — G başarısız: değerlendirilemez")}
 
     v["C bellek: yeniden yüklenen canlı birebir aynı davranır"] = {

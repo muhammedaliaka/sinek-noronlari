@@ -169,6 +169,8 @@ def _swap_mask(n_agents: int, n_cond: int, swap_roles: bool) -> np.ndarray:
     """Koşul başına canlıların ilk yarısı normal, ikinci yarısı A rolü = koku 1 (rol-dengeli tasarım)."""
     m = np.zeros(n_agents * n_cond, dtype=bool)
     if swap_roles:
+        if n_agents % 2:
+            raise ValueError("--swap-roles için canlı sayısı (--agents) çift olmalı, yoksa rol dengelemesi bozulur")
         for c in range(n_cond):
             m[c * n_agents + n_agents // 2:(c + 1) * n_agents] = True
     return m
