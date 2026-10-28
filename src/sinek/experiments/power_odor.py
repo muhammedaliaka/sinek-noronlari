@@ -26,10 +26,16 @@ def _shared(rng, A: int, T: int, indep: float):
     return draw
 
 
-def sim_hits(rng, p_by_arm: dict, A: int, T: int, creature_sd: float, indep: float) -> dict:
+def sim_hits(rng, p_by_arm: dict, A: int, T: int, creature_sd: float, indep: float, het: float = 0.0) -> dict:
+    """`het`: canlıya özgü tepkisellik — her kolun kör düzeyden sapması (1+h_i) ile çarpılır, h_i ~ N(0, het²) (kollar arası ortak).
+    Pilotta frozen kolun canlılar arası yayılımı iki terimli gürültüden büyüktü (etki canlıya göre değişiyor)."""
     dev = creature_sd * rng.standard_normal(A)
+    h = het * rng.standard_normal(A)
+    base = p_by_arm.get("anosmic", min(p_by_arm.values()))
     draw = _shared(rng, A, T, indep)
-    return {k: (draw() < np.clip(p + dev, 0.01, 0.99)[:, None]).astype(int) for k, p in p_by_arm.items()}
+    # referans karşılaştırıcı canlıdan bağımsızdır (aynı kural): canlı sapması ve yayılım yalnız canlı kollarına uygulanır
+    return {k: (draw() < (np.full(A, p) if k == "reference" else np.clip(base + (p - base) * (1 + h) + dev, 0.01, 0.99))[:, None]).astype(int)
+            for k, p in p_by_arm.items()}
 
 
 def sim_slots(rng, pd_by_arm: dict, A: int, T: int, indep: float) -> dict:
@@ -67,14 +73,14 @@ def scenarios(game: str, thr: Thr, p0: float, pa: float, ref: float) -> list[tup
     raise ValueError(game)
 
 
-def run(game: str, thr: Thr, sims: int, A: int, T: int, p0: float, pa: float, ref: float, creature_sd: float, indep: float, seed: int = 0):
+def run(game: str, thr: Thr, sims: int, A: int, T: int, p0: float, pa: float, ref: float, creature_sd: float, indep: float, het: float = 0.0, seed: int = 0):
     rng = np.random.default_rng(seed)
     ev = EVALUATORS[game]
     rows = []
     for name, spec in scenarios(game, thr, p0, pa, ref):
         n_ok, per, gates = 0, {}, 0
         for _ in range(sims):
-            h = sim_slots(rng, spec, A, T, indep) if game == "O4c" else sim_hits(rng, spec, A, T, creature_sd, indep)
+            h = sim_slots(rng, spec, A, T, indep) if game == "O4c" else sim_hits(rng, spec, A, T, creature_sd, indep, het)
             r = ev(h, thr)
             n_ok += r["passed"]
             gates += r["gates_ok"]
@@ -95,20 +101,23 @@ def main(argv=None) -> None:
     ap.add_argument("--ref", type=float, default=0.90, help="referans karşılaştırıcı isabeti — pilottan")
     ap.add_argument("--creature-sd", type=float, default=0.08)
     ap.add_argument("--indep", type=float, default=0.2, help="kolların bağımsız ayrıştığı deneme oranı — pilottan")
+    ap.add_argument("--het", type=float, default=0.0, help="canlıya özgü etki yayılımı (göreli) — pilottan")
+    ap.add_argument("--ref-min", type=float, default=0.80, help="doğrulayıcıda referans kapısı (O2'de tasarım-zamanı G1 ayrı ve büyük örnekle)")
+    ap.add_argument("--append", action="store_true", help="--out varsa sonuna ekle")
     ap.add_argument("--delta", type=float, default=0.15)
     ap.add_argument("--delta-eq", type=float, default=0.10)
     ap.add_argument("--boot", type=int, default=1000)
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
-    thr = Thr(delta=a.delta, delta_eq=a.delta_eq, n_boot=a.boot, n_perm=a.boot)
+    thr = Thr(delta=a.delta, delta_eq=a.delta_eq, ref_min=a.ref_min, n_boot=a.boot, n_perm=a.boot)
     t0 = time.time()
-    L = ["# Dört koku oyunu: güç ve yanlış-pozitif benzetimi", "",
-         f"Gerçek değerlendirici işlevlerle (`odor_eval`), {a.sims} benzetim/senaryo, {a.agents} canlı × {a.trials} deneme.",
+    L = ([] if a.append else ["# Dört koku oyunu: güç ve yanlış-pozitif benzetimi", ""]) + [
+         f"Koşu: {a.games} — gerçek değerlendirici işlevlerle (`odor_eval`), {a.sims} benzetim/senaryo, {a.agents} canlı × {a.trials} deneme.",
          f"Girdi parametreleri (pilottan; yer tutucu olabilir): kör düzey p0={a.p0}, çekim p={a.p_attract}, referans={a.ref}, "
-         f"canlı sd={a.creature_sd}, kol ayrışma oranı={a.indep}; δ={a.delta}, δ_eq={a.delta_eq}, α={thr.alpha}.", ""]
+         f"canlı sd={a.creature_sd}, kol ayrışma oranı={a.indep}, etki yayılımı={a.het}; δ={a.delta}, δ_eq={a.delta_eq}, α={thr.alpha}, referans kapısı ≥{a.ref_min}.", ""]
     for g in a.games.split(","):
         L += [f"## {g}", "", "| senaryo | hepsi geçti | kapılar tamam | ölçüt başına geçme |", "|---|---|---|---|"]
-        for r in run(g, thr, a.sims, a.agents, a.trials, a.p0, a.p_attract, a.ref, a.creature_sd, a.indep):
+        for r in run(g, thr, a.sims, a.agents, a.trials, a.p0, a.p_attract, a.ref, a.creature_sd, a.indep, a.het):
             L.append(f"| {r['senaryo']} | {r['geçti']:.2f} | {r['kapılar']:.2f} | " + ", ".join(f"{k} {v:.2f}" for k, v in r["ölçüt"].items()) + " |")
         L.append("")
         print(f"[{time.time() - t0:5.0f}s] {g} tamam", flush=True)
@@ -116,6 +125,8 @@ def main(argv=None) -> None:
     print(text)
     if a.out:
         Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+        if a.append and Path(a.out).exists():
+            text = Path(a.out).read_text(encoding="utf-8") + "\n" + text
         Path(a.out).write_text(text, encoding="utf-8")
 
 
