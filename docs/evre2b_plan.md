@@ -1,9 +1,8 @@
 # Evre 2b — ölçüt gücü artırılmış doğrulama: plan, yöntem denetimi, önceden yazılmış ölçütler
 
-> **DURUM: TASLAK.** Bu sürüm, geliştirme provası sonuçlarını görmeden önce yazıldı ve commit edildi; böylece §4.4'teki seçim kuralı
-> sonuçlardan önce sabitlenmiş olur. Prova bitince yalnızca "{{...}}" ile işaretli yerler ve §4.5 doldurulacak, belge **yeniden commit edilerek
-> kesinleşecek**; **doğrulayıcı koşular (tohum 30 ve 31) kesinleşmiş sürüm commit edilmeden başlamayacak.**
-> Kesinleşmeden sonra ölçütler değiştirilmez; başarısızlık da raporlanır.
+> **DURUM: KESİNLEŞTİ.** Bu belge, doğrulayıcı koşular (tohum 30 ve 31) başlamadan **önce** kesinleştirilip commit edilmiştir (git geçmişi: taslak
+> `a2c859e` — kazanç seçim kuralı geliştirme provasından önce; kesin sürüm sonraki commit). Bundan sonra ölçütler, yapılandırma ve karar kuralı değiştirilmez;
+> başarısızlık da raporlanır. Sonuçlar `docs/evre2b_sonuclar.md` içinde olacaktır. Güç analizi: [`evre2b_guc_analizi.md`](evre2b_guc_analizi.md).
 
 ## 1. Neden Evre 2b?
 
@@ -26,7 +25,7 @@ birkaç gözleme dayanıyordu. Evre 2b, **aynı soruyu** (gerçek mantar cismi a
 
 | Öğe | Evre 2 (v1) | Evre 2b |
 |---|---|---|
-| Hareket okuması | ε = 0,05, kazanç 40 | **ε = 2,0**, kazanç {{GAIN}} (§4.4 kuralıyla seçildi) |
+| Hareket okuması | ε = 0,05, kazanç 40 | **ε = 2,0**, kazanç **60** (§4.4 kuralıyla seçildi) |
 | Rol atama | A hep koku 0 | **rol dengelemesi**: her koşulun ikinci yarısında A = koku 1; sonuçlar rol cinsinden |
 | Canlı / deneme | 16 / 4 | **24 / 16** |
 | Test aşamaları | her 3 bölüm | naif, A6, A12, B18, B24 (her 6 bölümde) |
@@ -71,7 +70,28 @@ Kazanç ∈ {60, 80} için geliştirme provası (tohum 3, koku çifti kalibrasyo
 Prova yalnızca bu kararı ve hattı sınamak içindir; ölçüt değil.
 
 ### 4.5 Prova sonucu
-{{PROVA}}
+Tohum 3, koku çifti kalibrasyonla seçildi (desen tohumu 5333), 24 canlı/koşul, **8 deneme**, 12 + 12 bölüm, ε = 2,0, iki kazanç yan yana (her biri 142 dk, 2 iş parçacığı).
+Bu koşular **geliştirmedir; ölçüt sayılmaz.**
+
+| | kazanç 60 | kazanç 80 |
+|---|---|---|
+| eğitimsiz `plastic`+`frozen` seçim oranı | **0,49** | **0,40** |
+| `plastic` A-oranı: naif / A6 / A12 / B18 / B24 | 0,50 / 0,75 / 0,71 / 0,38 / 0,32 | 0,50 / 0,70 / 0,70 / 0,28 / 0,28 |
+| `plastic` seçim oranı A12 | 0,86 | 0,86 |
+| A12: `frozen` / `random` A-oranı | 0,43 / 0,47 | 0,52 / 0,47 |
+| nihai değerlendirici (7 ölçüt) | **hepsi PASS** (A2 p = 0,0001 / 0,0002) | **hepsi PASS** (A2 p = 0,0024 / 0,0001) |
+
+**Kural uygulaması (§4.4):** adım 1'de iki kazanç da elenir (0,49 ve 0,40, ikisi de < 0,50) → "ikisi de elenirse 60" → **kazanç 60**.
+(Kazanç 80'in eğitimsiz seçim oranı G eşiğine (0,40) tam dayandı; kural bunu yakalamak içindi.)
+
+Gözlemler ve açık riskler:
+* Pilotta (tohum 2) A6 → A12 düşüşü görülmüştü; provada **tekrarlanmadı** (0,75 → 0,71 ve 0,70 → 0,70). Hâlâ açıklanmış değil, ama belirgin bir sorun görünmüyor.
+* Eğitimsiz seçim oranı koku çiftine göre değişiyor: tohum 2'de 0,68–0,69, tohum 3'te 0,49. **Doğrulayıcı tohumlardan birinde oran 0,40'ın altında kalabilir; o zaman G başarısız olur,
+  A2/A3 "değerlendirilemez" = FAIL sayılır ve koşu tekrarlanmaz, G eşiği değiştirilmez.** Bu risk bilerek kabul edildi (eşik gözlem sayısının yeterliliğini korur).
+* Tersine çevirme (B24) pilottan güçlü çıktı (0,32 / 0,28; pilotta yalnız 3 bölüm vardı).
+* **Deneme sayısı 16'ya çıkarıldı** (prova 8 deneme ile koşuldu ve rahat geçti; ama başka koku çiftlerinde etki daha zayıf olabilir). Gerekçe `evre2b_guc_analizi.md` tasarım ızgarası:
+  pilot-benzeri etkide (0,72 → 0,40) 24 × 8 yalnız %59, 24 × 16 %94 güce sahip. Bu karar doğrulayıcı verisi görülmeden verildi.
+* Tek koşu ~2,4 saat sürdü (24 × 8); 16 deneme ile testler iki katına çıkacağından koşu başına yaklaşık 3,5–4 saat beklenir.
 
 ## 5. Yöntem denetimi (bu planın kurulduğu sırada yapıldı)
 
@@ -94,19 +114,35 @@ Model: canlıya özgü tercih ~ Beta (κ = canlılar arası değişkenlik), canl
 Parametreler pilot gözlemlerinden gelir, ölçülmüş "doğru" değerler değildir. Pilotlarda canlılar arası aşırı yayılım gözlenmedi (gözlenen/iki terimli varyans oranı 0,4–1,5, ortalama ≈ 0,8), bu yüzden
 pilot-benzeri senaryolarda κ çok büyük alındı.
 
-{{GUC_TABLOLARI}}
+Ayrıntılı tablolar: [`evre2b_guc_analizi.md`](evre2b_guc_analizi.md). Özet (tüm ölçütleri geçme olasılığı, 1000 benzetim):
+
+| senaryo | 24 × 8 | 24 × 16 |
+|---|---:|---:|
+| öğrenme yok (0,50 → 0,50) | 0,00 | — |
+| güçlü etki (0,76 → 0,36) | 0,89 | 1,00 |
+| pilot-benzeri etki (0,72 → 0,40) | 0,59 | 0,94 |
+| daha zayıf etki (0,68 → 0,42) | 0,34 | 0,77 |
+
+Öğrenme yokken karar kuralı yanlış-pozitif üretmiyor. Güç analizi sentetiktir (sınırlamaları belgede): gerçek koşunun geçeceğinin garantisi değildir.
 
 ## 7. Doğrulayıcı koşular
 
 ```
-python -m sinek.experiments.evre2b --seed 30 --threads 4 --out results/evre2b_s30
-python -m sinek.experiments.evre2b --seed 31 --threads 4 --out results/evre2b_s31
+python -m sinek.experiments.evre2b --seed 30 --threads 2 --out results/evre2b_s30
+python -m sinek.experiments.evre2b --seed 31 --threads 2 --out results/evre2b_s31
 ```
-Varsayılanlar kodda dondurulmuştur (`evre2.main(v2=True)`: 24 canlı, 12 + 12 bölüm, test_every 6, {{TRIALS}} deneme, rol dengelemesi; `evre2.V2_SET`: hareket okuması).
+(`--threads` sonucu değiştirmez: 2 ve 4 iş parçacığı birebir aynı sonucu verdi, aynı makinede; iki koşu yan yana koşulur.)
+Varsayılanlar kodda dondurulmuştur (`evre2.main(v2=True)`: 24 canlı, 12 + 12 bölüm, test_every 6, 16 deneme, rol dengelemesi; `evre2.V2_SET`: hareket okuması).
 Koku çifti her tohumda **yalnızca eğitimsiz ağın iç eğilimine** göre seçilir (öğrenme/davranış sonucu kullanılmaz).
 
 **E1 yapısal kontrolü (yalnız tohum 30 kurulumu):** MBON yaklaş/kaçın etiketleri karıştırılır (`--set cbrain.class_shuffle_seed=1`, ikinci koşuda `=2`); bağlantı ve bölme eşlemesi aynı kalır;
-**koku çifti karıştırılmış ağ için yeniden kalibre edilir** (`--pattern-seed` verilmez). Değerlendirme: `python -m sinek.experiments.evre2b_e1`.
+**koku çifti karıştırılmış ağ için yeniden kalibre edilir** (`--pattern-seed` verilmez). Komutlar:
+```
+python -m sinek.experiments.evre2b --seed 30 --threads 2 --out results/evre2b_s30_shuffle1 --set cbrain.class_shuffle_seed=1
+python -m sinek.experiments.evre2b --seed 30 --threads 2 --out results/evre2b_s30_shuffle2 --set cbrain.class_shuffle_seed=2
+python -m sinek.experiments.evre2b_e1 --real results/evre2b_s30 --shuffle results/evre2b_s30_shuffle1 results/evre2b_s30_shuffle2 --out docs/evre2b_e1_s30.md
+```
+Ölçüt (`evre2b_e1.py`): karıştırılmış `plastic`'in A12 havuzlanmış A-oranı gerçek-etiketli koşudan düşük (tek yönlü küme permütasyonu, p < 0,01) **ve** karıştırılmış ağın seçim oranı ≥ 0,40; her iki karıştırma da geçmeli.
 E1, ana karar kuralının parçası **değildir**; ama FAIL (ya da değerlendirilemez) ise "gerçek sınıf yapısı işe yarıyor" iddiası kurulmaz.
 
 ## 8. Başarı ölçütleri (koşu başına; hepsi iki doğrulayıcı koşuda da sağlanmalı)

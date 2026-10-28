@@ -135,14 +135,14 @@ def _git_commit() -> str | None:
         return None
 
 
-# Evre 2b (docs/evre2b_plan.md) hareket okuması: Evre 2 v1'den farkı; geliştirme tohumlarında seçildi.
-V2_SET = []
+# Evre 2b (docs/evre2b_plan.md §4.4) hareket okuması: Evre 2 v1'den farkı; geliştirme tohumlarında (2, 3) seçildi, donduruldu.
+V2_SET = ["motor.contrast_eps=2.0", "motor.turn_gain=60"]
 
 
 def main(argv=None, v2: bool = False) -> dict:
     ap = evre1.build_parser(description=__doc__, default_out="results/evre2b" if v2 else "results/evre2")
     if v2:   # Evre 2b varsayılanları (ön-kayıt: docs/evre2b_plan.md)
-        ap.set_defaults(agents=24, episodes=12, reversal_episodes=12, test_every=6, trials=8, swap_roles=True)
+        ap.set_defaults(agents=24, episodes=12, reversal_episodes=12, test_every=6, trials=16, swap_roles=True)
     ap.add_argument("--calib-candidates", type=int, default=40, help="aday koku çifti sayısı")
     ap.add_argument("--pattern-seed", type=int, default=None,
                     help="koku çifti aramasını atla, bu tohumun desenini kullan (kontrol koşuları ana koşuyla aynı çifti kullanır)")

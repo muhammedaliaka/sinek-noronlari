@@ -39,3 +39,11 @@ def test_v2_refuses_to_run_without_frozen_motor_readout(monkeypatch):
     monkeypatch.setattr(evre2, "V2_SET", [])
     with pytest.raises(SystemExit):
         evre2.main(["--seed", "30", "--out", "/tmp/unused_evre2b_guard"], v2=True)
+
+
+def test_v2_frozen_configuration():
+    """Ön-kayıtlı Evre 2b yapılandırması (docs/evre2b_plan.md §4.4, §7) kodda donmuştur; değişirse bu test bilinçli olarak güncellenmelidir."""
+    from sinek.experiments import evre2, evre2b
+
+    assert evre2.V2_SET == ["motor.contrast_eps=2.0", "motor.turn_gain=60"]
+    assert (evre2b.ALPHA, evre2b.GATE_MIN_RATE, evre2b.NAIVE_EQUIV, evre2b.STAT_SEED) == (0.01, 0.40, (0.30, 0.70), 0)
