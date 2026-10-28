@@ -28,35 +28,63 @@ import json
 O3_TOKENS = ("plastic:A", "plastic:B", "plastic:C", "plastic:D", "frozen:A")
 
 
+def _part(part_dir, name: str, key: str):
+    """Kol-kol kontrol noktası (V-03): sonuç YALNIZ aynı anahtarla (oyun/tohum/boyutlar/ön-eğitim özeti) yazılmış dosyadan okunur."""
+    if part_dir is None:
+        return None, None
+    path = Path(part_dir) / f"{name}.npz"
+    if path.exists():
+        z = np.load(path, allow_pickle=False)
+        if str(z["key"]) == key:
+            return path, z
+    return path, None
+
+
 def _parse(token: str):
     arm, _, o3 = token.partition(":")
     return arm, (o3 or None)
 
 
-def run_o3(pre, seed: int, agents: int, copies: int, trials: int, seconds: float, verbose=True) -> dict:
+def run_o3(pre, seed: int, agents: int, copies: int, trials: int, seconds: float, verbose=True, part_dir=None, key: str = "") -> dict:
     ids = list(range(min(agents, pre.world.B)))
     hits, seen, t0 = {}, 0, time.time()
     for tok in O3_TOKENS:
+        path, z = _part(part_dir, "o3_" + tok.replace(":", "_"), key)
+        if z is not None:
+            hits[tok], seen = z["h"], seen + int(z["seen"])
+            if verbose:
+                print(f"[{time.time() - t0:6.0f}s] O3 {tok:<10} kontrol noktasından okundu p_hit={hits[tok].mean():.3f}", flush=True)
+            continue
         arm, o3 = _parse(tok)
+        seen_arm = 0
         c = make_game_creature(pre, "O3", arm, ids, copies, seed, o3=o3)
         learn = ARMS[arm].eta > 0
         slots = []
         for _ in range(trials):
             out = play(c, seconds, learn=learn, test=False)
             slots.append(out["slot"].reshape(len(ids), copies))
-            seen += int((out["first_odor_step"] >= 0).sum())
+            seen_arm += int((out["first_odor_step"] >= 0).sum())
+        seen += seen_arm
         h = (np.stack(slots, -1) == 0).astype(int).reshape(len(ids), -1)       # (canlı, kopya*deneme)
         hits[tok] = h
+        if path is not None:
+            np.savez(path, h=h, seen=seen_arm, key=key)
         if verbose:
             print(f"[{time.time() - t0:6.0f}s] O3 {tok:<10} p_hit={h.mean():.3f}", flush=True)
     return {"hits": hits, "field_seen_trials": seen, "n_creatures": len(ids)}
 
 
 def run_o4(pre, game: str, seed: int, agents: int, copies: int, trials: int, seconds: float, test_reps: int, snap_eps=(3, 6),
-           verbose=True) -> dict:
+           verbose=True, part_dir=None, key: str = "") -> dict:
     ids = list(range(min(agents, pre.world.B)))
     out, t0 = {}, time.time()
     for arm in ("plastic", "frozen", "anosmic"):
+        path, z = _part(part_dir, "o4_" + arm, key)
+        if z is not None:
+            out[arm] = {int(k[2:]): z[k] for k in z.files if k.startswith("ep")}
+            if verbose:
+                print(f"[{time.time() - t0:6.0f}s] {game} {arm:<8} kontrol noktasından okundu", flush=True)
+            continue
         c = make_game_creature(pre, game, arm, ids, copies, seed)
         learn = ARMS[arm].eta > 0
         snaps = {}
@@ -70,6 +98,8 @@ def run_o4(pre, game: str, seed: int, agents: int, copies: int, trials: int, sec
             if learn:
                 play(c, seconds, learn=True, test=False)
         out[arm] = snaps
+        if path is not None:
+            np.savez(path, key=key, **{f"ep{ep}": v for ep, v in snaps.items()})
         if verbose:
             s = snaps[trials]
             print(f"[{time.time() - t0:6.0f}s] {game} {arm:<8} test(ep {trials}): decoy-ilk {np.mean(s == 1):.3f} gerçek-ilk {np.mean(s == 0):.3f}", flush=True)
@@ -144,13 +174,17 @@ def main(argv=None) -> dict:
     thr = Thr(delta=a.delta, delta_eq=a.delta_eq, attract_mult=a.attract_mult, n_boot=a.boot, n_perm=a.boot)
     pre = checkpoint.load(a.pre)
     t0 = time.time()
-    run = run_o3(pre, a.seed, a.agents, copies, trials, a.seconds) if a.game == "O3" else \
-        run_o4(pre, a.game, a.seed, a.agents, copies, trials, a.seconds, a.test_reps)
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    part_dir = out / "partial"
+    part_dir.mkdir(exist_ok=True)
+    key = json.dumps({"game": a.game, "seed": a.seed, "agents": a.agents, "copies": copies, "trials": trials, "seconds": a.seconds,
+                      "test_reps": a.test_reps, "pre_sha": _sha(a.pre)}, sort_keys=True)
+    run = run_o3(pre, a.seed, a.agents, copies, trials, a.seconds, part_dir=part_dir, key=key) if a.game == "O3" else \
+        run_o4(pre, a.game, a.seed, a.agents, copies, trials, a.seconds, a.test_reps, part_dir=part_dir, key=key)
     ev = evaluate(a.game, run, trials, thr)
     meta = {"stamp": "**PİLOT — kanıt değildir.**" if a.pilot else "Doğrulayıcı koşu.", "pre": a.pre, "pre_sha": _sha(a.pre), "git": _git_head()}
     text = report(a.game, a.seed, ev, run, trials, thr, meta)
-    out = Path(a.out)
-    out.mkdir(parents=True, exist_ok=True)
     (out / "summary.md").write_text(text, encoding="utf-8")
     raw = ({"hits": {k: v.tolist() for k, v in run["hits"].items()}, "field_seen_trials": run["field_seen_trials"]} if a.game == "O3"
            else {"slots": {arm: {str(ep): v.tolist() for ep, v in s.items()} for arm, s in run["slots"].items()}})

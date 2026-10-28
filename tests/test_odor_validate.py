@@ -39,3 +39,24 @@ def test_session_validator_end_to_end_small(cfg):
     c = make_game_creature(pre, "O4a", "frozen", [0, 1], 2, 150)
     t = snapshot(c, 9, reps=4)
     assert t.world.B == c.world.B * 4 and t.world.swap.tolist() == c.world.swap.repeat_interleave(4).tolist()
+
+
+def test_session_validator_resumes_from_partials(cfg, tmp_path, monkeypatch):
+    """V-03: kol-kol kontrol noktası. İkinci çalıştırma hiçbir kolu yeniden koşmaz ve sonuçlar birebir aynıdır; anahtar farklıysa yeniden koşulur."""
+    from sinek.experiments import odor_validate_s as VS
+
+    pre = pretrain(cfg, odor_patterns(cfg.world, 3), 2, seed=3, episodes=1, seconds=4.0)
+    kw3 = dict(agents=2, copies=2, trials=2, seconds=4.0, verbose=False)
+    a = VS.run_o3(pre, 150, part_dir=tmp_path, key="k1", **kw3)
+    monkeypatch.setattr(VS, "play", lambda *x, **y: (_ for _ in ()).throw(AssertionError("kontrol noktası kullanılmadı")))
+    b = VS.run_o3(pre, 150, part_dir=tmp_path, key="k1", **kw3)
+    assert all((a["hits"][t] == b["hits"][t]).all() for t in VS.O3_TOKENS) and a["field_seen_trials"] == b["field_seen_trials"]
+    with pytest.raises(AssertionError):
+        VS.run_o3(pre, 150, part_dir=tmp_path, key="baska", **kw3)           # farklı anahtar: eski dosya geçersiz, yeniden koşar
+    monkeypatch.undo()
+    kw4 = dict(agents=2, copies=2, trials=2, seconds=4.0, test_reps=2, snap_eps=(1,), verbose=False)
+    c = VS.run_o4(pre, "O4a", 150, part_dir=tmp_path, key="k1", **kw4)
+    monkeypatch.setattr(VS, "play", lambda *x, **y: (_ for _ in ()).throw(AssertionError("kontrol noktası kullanılmadı")))
+    d = VS.run_o4(pre, "O4a", 150, part_dir=tmp_path, key="k1", **kw4)
+    assert all((c["slots"][arm][ep] == d["slots"][arm][ep]).all() for arm in c["slots"] for ep in c["slots"][arm])
+    assert set(c["slots"]["plastic"]) == set(d["slots"]["plastic"])
