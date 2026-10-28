@@ -1,12 +1,12 @@
 # Sinek Nöronları — koku/ödül öğrenen dijital canlı
 
 Sinek beyninden esinlenen, **algılayan, hareket eden, deneyimle öğrenen ve öğrendiğini koruyan** sanal bir canlı.
-Bu depo uzun vadeli bir projenin **Evre 1 ve Evre 2** çıktısıdır. Proje bağlamı ve hedefler: [`docs/proje_raporu.md`](docs/proje_raporu.md).
+Bu depo uzun vadeli bir projenin **Evre 1, Evre 2 ve Evre 2b** çıktısıdır. Proje bağlamı ve hedefler: [`docs/proje_raporu.md`](docs/proje_raporu.md).
 
 > **Dürüstlük notu:** Evre 1'de ağ, sineğin mantar cismi (*mushroom body*) mimarisinden esinlenen **sentetik** bir devredir.
 > Evre 2'de aynı deney, **MaleCNS v1.0 bağlantı haritasından** çıkarılan gerçek mantar cismi alt ağıyla tekrarlandı
 > (aşağıda). Hiçbiri gerçek sinek davranışı hakkında iddia taşımaz: ortam sanal, hareket kuralı elle yazılmış,
-> öğrenme kuralı ve birçok parametre model varsayımıdır. **Evre 2'nin önceden yazılmış ölçütleri tam karşılanmadı** (tohum 20: 5/6, tohum 21: 4/6).
+> öğrenme kuralı ve birçok parametre model varsayımıdır. **Evre 2'nin önceden yazılmış ölçütleri tam karşılanmadı** (tohum 20: 5/6, tohum 21: 4/6); ölçüm gücü artırılmış yeni ön-kayıtlı **Evre 2b**'de (tohum 30 ve 31) 7/7 ve 7/7 geçti.
 
 ## Ne yapıyor?
 
@@ -146,18 +146,44 @@ python -m sinek.experiments.evre2 --quick --out results\evre2_quick
 **Veri atfı:** MaleCNS connectome (FlyEM / HHMI Janelia, Cambridge Zoology, MRC LMB, Google Research), CC BY 4.0; ayrıntı [`data/README.md`](data/README.md).
 Nörotransmitter değerleri sınıflandırıcı tahminidir, ölçüm değildir.
 
+## Evre 2b: aynı soru, artırılmış ölçüm gücü (yeni ön-kayıt)
+
+Evre 2'nin iki ölçütü ölçüm gücü yüzünden kalmıştı (eğitimsiz ağ kaynağa nadiren ulaşıyor, çok az gözlem). Evre 2b, **v1'in hükmüne dokunmadan** yeni bir ön-kayıt yazdı
+([`docs/evre2b_plan.md`](docs/evre2b_plan.md)): hareket okuması yaklaşık doğrusal yapıldı (ε = 2,0; eğitimsiz canlılar artık dönüp durmuyor, seçim oranı 0,17 → ~0,55), koku kimliği yanlılığı rol
+dengelemesiyle giderildi, istatistik canlı-düzeyi (küme) bootstrap/permütasyona geçti, geçerlilik kapısı (G) eklendi, ölçütler benzetimle sınandı (A3'ün kusuru bu sırada bulunup düzeltildi),
+deneme sayısı 16'ya çıkarıldı. Doğrulayıcı tohumlar 30 ve 31 (geliştirmede hiç kullanılmadı), koşul başına 24 canlı:
+
+| | Tohum 30 | Tohum 31 |
+|---|---|---|
+| A tercihi, eğitimsiz | 0,50 [0,45; 0,54] | 0,47 [0,42; 0,52] |
+| A tercihi, A eğitiminden sonra (`plastic`) | **0,72** [0,67; 0,76] | **0,74** [0,68; 0,80] |
+| `frozen` / `random` kontrol | 0,51 / 0,49 | 0,46 / 0,47 |
+| A tercihi, ödül B'ye taşındıktan sonra | **0,28** [0,22; 0,35] | **0,26** [0,21; 0,32] |
+| Ölçütler | **7 / 7** | **7 / 7** |
+
+* Ön-kayıtlı karar kuralına göre **Evre 2b ölçütü başarılı**. Etki orta büyüklükte (v1'de 0,90–0,92'ydi; farklı hareket okuması nedeniyle doğrudan karşılaştırılamaz).
+* Hata sinyali (dopamin) hâlâ elle yazılı; "hataları daha hızlı anlama" bu sonuçla iddia edilemez. Gerçek sinek davranışı hakkında iddia yoktur.
+* E1 sınıf-karıştırma kontrolü sürüyor (ana karar kuralının dışında).
+
+Ayrıntılar: [`docs/evre2b_sonuclar.md`](docs/evre2b_sonuclar.md) · güç analizi: [`docs/evre2b_guc_analizi.md`](docs/evre2b_guc_analizi.md).
+
+```powershell
+# doğrulayıcı koşu (~3,5 saat, CPU, 2 iş parçacığı)
+python -m sinek.experiments.evre2b --seed 30 --threads 2 --out results\evre2b_s30
+```
+
 ## Yol haritası
 
 | Evre | İçerik | Durum |
 |---|---|---|
 | 1 | Sentetik mantar cismi devresi, 2B dünya, koku/ödül öğrenme, tersine çevirme, bellek | **tamam** (6/6 ve 6/6) |
-| 2 | Gerçek bağlantı verisi (MaleCNS v1.0): lisans ve sürüm doğrulaması, mantar cismi alt ağı, koku/ödül öğrenme | **yapıldı, ölçütler kısmen karşılandı** (5/6 ve 4/6); ölçüm gücü sorunu açık |
+| 2 / 2b | Gerçek bağlantı verisi (MaleCNS v1.0): lisans ve sürüm doğrulaması, mantar cismi alt ağı, koku/ödül öğrenme | v1: ölçütler kısmen karşılandı (5/6 ve 4/6, ölçüm gücü sorunu); **Evre 2b (yeni ön-kayıt): 7/7 ve 7/7 geçti** |
 | 3 | Açlık/enerji ihtiyaçları, serbest keşif; seçilmiş devre birleştirme; 10–20 bin özel nöron + ablasyon deneyleri | planlı |
 | 4 | FlyGym ile 3B beden | planlı |
 
 `make_brain(cfg, ...)` (`src/sinek/brains.py`) sentetik (`MushroomBodyBrain`) ve bağlantı-tabanlı (`ConnectomeBrain`) beyinleri aynı arayüzün
 (`step(glom, taste, touch, learn)` → değer, `state_dict`) arkasında verir; dünya, ajan ve deney kodu iki evrede de aynıdır.
-Açık kalan: Evre 2'de ölçüt gücünü artırmak (eğitimsiz ağın az seçim yapması), MBON→DAN geri beslemesi ve diğer MB alt ağları.
+Açık kalan: MBON→DAN geri beslemesinin veriden açılması (hata sinyalinin elle yazılı olmaması), tam-CNS'e gömme testi, diğer MB alt ağları ve GPU'ya geçiş hazırlığı.
 
 Büyütme/birleştirme aşaması için hazırlık: [`docs/birlestirme_risk_analizi.md`](docs/birlestirme_risk_analizi.md) (uzman-panel riskleri, yedek planlar, kapılar) ·
 kararlar, hata sicili ve değişiklik günlüğü: [`docs/karar_defteri.md`](docs/karar_defteri.md).
