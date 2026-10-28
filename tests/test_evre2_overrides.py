@@ -28,3 +28,14 @@ def test_bad_override_exits():
         apply_override(cfg, "cbrain.restore=maybe")
     with pytest.raises(SystemExit):
         apply_override(cfg, "cbrain.yok=1")
+
+
+def test_v2_refuses_to_run_without_frozen_motor_readout(monkeypatch):
+    """V2_SET boşken (donmamış okuma) ve açık motor.* geçersiz kılması yokken Evre 2b koşusu başlamaz."""
+    import pytest
+
+    from sinek.experiments import evre2
+
+    monkeypatch.setattr(evre2, "V2_SET", [])
+    with pytest.raises(SystemExit):
+        evre2.main(["--seed", "30", "--out", "/tmp/unused_evre2b_guard"], v2=True)

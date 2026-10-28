@@ -153,6 +153,9 @@ def main(argv=None, v2: bool = False) -> dict:
     a = ap.parse_args(argv)
     if a.threads:
         torch.set_num_threads(a.threads)
+    if v2 and not V2_SET and not any(x.startswith("motor.") for x in a.set):
+        raise SystemExit("Evre 2b: hareket okuması (evre2.V2_SET) henüz dondurulmadı; v1 okumasıyla doğrulayıcı koşu yapılmaz. "
+                         "Geliştirme için --set motor.contrast_eps=... --set motor.turn_gain=... verin.")
     cfg = mbmodel.connectome_config(a.data_dir)
     for item in (V2_SET if v2 else []) + a.set:
         apply_override(cfg, item)
