@@ -55,7 +55,7 @@ def scenarios(game: str, thr: Thr, p0: float, pa: float, ref: float) -> list[tup
         return [("sıfır etki", {**base, "frozen": p0}), (f"etki δ={d}", {**base, "frozen": p0 + d}),
                 (f"etki 1,5δ={1.5 * d:.3f}", {**base, "frozen": p0 + 1.5 * d}), (f"etki 2δ={2 * d}", {**base, "frozen": p0 + 2 * d})]
     if game == "O3":
-        eq = {k: p0 for k in "ABCD"}
+        eq = {k: p0 for k in "ABCDF"}          # A-D: plastic 2x2 hücreleri, F: frozen:A
         return [("sıfır sapma", eq), (f"D sapması = δ_eq/2 ({e / 2:.3f})", {**eq, "D": p0 + e / 2}),
                 (f"D sapması = δ_eq ({e})", {**eq, "D": p0 + e}), (f"D sapması = 2δ_eq ({2 * e})", {**eq, "D": p0 + 2 * e})]
     if game == "O4a":

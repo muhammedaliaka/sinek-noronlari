@@ -117,19 +117,23 @@ def hits(out: dict, slot: int = 0) -> np.ndarray:
     return (out["slot"] == slot).astype(int)
 
 
-def snapshot(creature: Creature, seed: int, game: str | GameSpec | None = None, spec: GameSpec | None = None) -> Creature:
+def snapshot(creature: Creature, seed: int, game: str | GameSpec | None = None, spec: GameSpec | None = None, reps: int = 1) -> Creature:
     """Eğitim sürerken test için: aynı ağırlıkların öğrenmesi kapalı bağımsız kopyası (yeni GameWorld, ayrı tohum).
 
-    Eğitim dünyası ve gürültü akışı etkilenmez (Evre 2b `make_test_creature` ile aynı fikir)."""
+    Eğitim dünyası ve gürültü akışı etkilenmez (Evre 2b `make_test_creature` ile aynı fikir). `reps` > 1: her eleman `reps` kez
+    kopyalanır (eleman-major; çift olmalı: ardışık kopyalar ayna çiftidir) — test örneğini büyütmek için."""
     w = creature.world
     sp = spec or (GAMES[game] if isinstance(game, str) else (game or w.spec))
-    world = GameWorld(w.cfg, sp, w.B, seed, str(w.device), patterns=w.patterns, swap=w.swap)
-    world.set_anosmic(w.anosmic)
-    brain = creature.brain.select(torch.arange(w.B)) if hasattr(creature.brain, "select") else creature.brain
+    if reps % 2 and reps != 1:
+        raise ValueError("reps çift olmalı (ayna çiftleri)")
+    idx = torch.arange(w.B).repeat_interleave(reps)
+    world = GameWorld(w.cfg, sp, w.B * reps, seed, str(w.device), patterns=w.patterns, swap=w.swap[idx.to(w.swap.device)])
+    world.set_anosmic(w.anosmic[idx.to(w.anosmic.device)])
+    brain = creature.brain.select(idx) if hasattr(creature.brain, "select") else creature.brain
     if hasattr(brain, "eta_scale"):
         brain.eta_scale = torch.zeros_like(brain.eta_scale)
     c = Creature(creature.cfg, brain, world)
-    c.turn_gain = creature.turn_gain.clone()
+    c.turn_gain = creature.turn_gain[idx.to(creature.turn_gain.device)].clone()
     return c
 
 
