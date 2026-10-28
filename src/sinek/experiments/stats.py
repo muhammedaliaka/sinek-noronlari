@@ -72,3 +72,43 @@ def binom_two_sided(k: int, n: int) -> float:
         return float("nan")
     pk = comb(n, k)
     return min(1.0, sum(comb(n, j) for j in range(n + 1) if comb(n, j) <= pk) / 2 ** n)
+
+
+# ---------------------------------------------------------------- eşli (canlı içi) karşılaştırmalar: dört koku oyunu
+# Birim canlıdır; her canlının iki kolu (aynı yerleşimler, ortak rastgele sayılar) vardır. Fark d_i = (x_i − y_i) / deneme sayısı.
+# Bu işlevler docs/dort_koku_oyunu_plani.md §5.2'deki ön-kayıtlı istatistiktir; kullanılmadan önce null/bilinen-etki testleri (tests/test_stats_paired.py).
+def _paired_diff(x, y, n_trials) -> np.ndarray:
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    if x.shape != y.shape:
+        raise ValueError("eşli kollar aynı canlı sayısında olmalı")
+    return (x - y) / float(n_trials)
+
+
+def paired_cluster_ci(x, y, n_trials, n: int = 10000, seed: int = 0, alpha: float = 0.01):
+    """(ortalama fark, alt, üst): canlılar yerine koyarak yeniden örneklenir; yüzdelik (1−alpha) aralığı."""
+    d = _paired_diff(x, y, n_trials)
+    rng = np.random.default_rng(seed)
+    means = d[rng.integers(0, len(d), size=(n, len(d)))].mean(1)
+    return float(d.mean()), float(np.quantile(means, alpha / 2)), float(np.quantile(means, 1 - alpha / 2))
+
+
+def paired_signflip_p(x, y, n_trials, n: int = 20000, seed: int = 0, alternative: str = "greater") -> float:
+    """Eşli farkların ortalaması için işaret-çevirme permütasyonu p değeri (H0: fark dağılımı 0 etrafında simetrik)."""
+    d = _paired_diff(x, y, n_trials)
+    rng = np.random.default_rng(seed)
+    flips = rng.choice([-1.0, 1.0], size=(n, len(d)))
+    perm = (flips * d).mean(1)
+    obs = d.mean()
+    if alternative == "greater":
+        ge = int((perm >= obs - 1e-12).sum())
+    elif alternative == "less":
+        ge = int((perm <= obs + 1e-12).sum())
+    else:
+        ge = int((np.abs(perm) >= abs(obs) - 1e-12).sum())
+    return (ge + 1) / (n + 1)
+
+
+def paired_equivalent(x, y, n_trials, delta: float, alpha: float = 0.01, n: int = 10000, seed: int = 0):
+    """TOST benzeri eşdeğerlik: (1−2·alpha) bootstrap aralığı (−delta, delta) içinde mi? (mean, lo, hi, geçti)."""
+    m, lo, hi = paired_cluster_ci(x, y, n_trials, n=n, seed=seed, alpha=2 * alpha)
+    return m, lo, hi, bool(lo > -delta and hi < delta)

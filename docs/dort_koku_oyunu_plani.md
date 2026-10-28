@@ -48,7 +48,7 @@ Kanıt türleri: **K** = kod okuması (dosya), **H** = hesap/benzetim (`docs/gir
 | Z-20 | O2 "yumuşak, sınırlı" profil (§4.2) tanımsız | Kenar türevi artefakt yaratır. | `C(d) = A·(1−(d/R)²)³` (d<R), aksi **tam 0.0**; C² süreklidir (§3.2). |
 | Z-21 | O2 koşullu "bölgeye girenler" karşılaştırması seçilim yanlılığı | Taslak "eşleşmiş giriş" diyor ama nasıl yapılacağı yok. | **O2-yakın** deneme türü: başlangıç bölgenin dışında R+2 halkasında, yön rastgele, kollar CRN eşli (§3.2). |
 | Z-22 | Ön-eğitim her oyunda ayrı mı? | Gereksiz hesap. | Tohum başına **bir** ön-eğitim (A fazı, 12 bölüm, Evre 2b ile aynı), oyunlar `select` ile kopyalar (ön-eğitim ≈ 10 dk). |
-| Z-23 | Kaynak/bağlantılar | Taslak `muhammedaliaka/sinek-noronlari` adresine bağlanıyor; bu oturumda erişilen depo `…/sinek-n-ronlar-`. Bağlantılar doğrulanmadı. | Bağlantılar **[doğrulanmadı]**; kaynakça durumu §10. |
+| Z-23 | Kaynak/bağlantılar | Taslak `muhammedaliaka/sinek-noronlari` adresine bağlanıyor; bu oturumda erişilen depo `…/sinek-n-ronlar-`. `git push` çıktısı "This repository moved … sinek-noronlari" dedi: **depo yeniden adlandırılmış**, adres uyuşmazlığı bu. İçeriğe (commit `cd51319`) bu oturumdan doğrudan bakılmadı. | Depo adresi **[doğrulandı: yönlendirme]**, commit bağlantısı **[doğrulanmadı]**; kaynakça durumu §10. |
 | Z-24 | İş yükü: "3 072 deneme × 3 000 adım" varsayımı | 60 sn ve ölçülmemiş hız. | Ölçülen alt sınır ≈1,4 bin canlı-adım/sn (Evre 2b s30); T=25 sn ile oyun-tohum başına ≈ 25 dk (§7). Gerçek hız pilotta yeniden ölçülür. |
 
 ---
@@ -130,7 +130,7 @@ Her oyun için: **G** (geçerlilik kapıları) ve **P** (birincil ölçütler), 
 | Oyun | Geçerlilik kapıları | Birincil ölçütler |
 |---|---|---|
 | O1 | G1 referans `p_hit≥0,80` ve anosmik ∈[0,15; 0,45]; G0 S0 regresyon | P1 frozen(koku açık) − anosmik: eşli %99 GA alt sınırı >0 ve ≥δ₁; P2 aynısı vs `random`; P3 ayna yarılarının *her ikisinde* fark >0 |
-| O2 | G1 (referans), G2 **CRN: ilk koku alımına dek yörüngeler bit-bit aynı (%100)**, kör bölgeye giriş ∈[0,3; 0,9] | P1 O2-yakın: koku açık − anosmik `p_hit` farkı (eşli, α=0,01, ≥δ₂) |
+| O2 | G1 (referans, O2-yakın `p_hit≥0,80`), G2 **CRN: ilk koku alımına dek yörüngeler bit-bit aynı (%100)**, kör bölgeye giriş ∈[0,3; 0,9] | P1 O2-yakın: koku açık − anosmik `p_hit` farkı (eşli, α=0,01, ≥δ₂) |
 | O3 | G3 ön-temas `glom≡0` (%100), temas→etki sırası testi | E3 tüm kol çiftlerinde `|Δp_hit|` GA ⊂ [−δ_eq, δ_eq]; kör düzey raporu |
 | O4a | G4 çekim odası | P1 plastic − frozen decoy `p_hit` (eşli, ≤ −δ₄); ikincil: bölüm eğilimi |
 | O4c | G3-benzeri, G4 | P1 decoy-ilk oranı plastic<frozen−δ₄; P2 gerçek-ilk oranı kör düzeyin δ_eq altına düşmemeli |
@@ -160,9 +160,9 @@ Sabit ileri hız; "yüksek değerli antene dön" kontrast kuralı (ε=2,0, kazan
 
 | Kapı | İçerik | Durum |
 |---|---|---|
-| G0 / S0 | Eski `World` + `Creature` davranışının **bit-bit** korunması (regresyon) | yapılacak (ilk iş) |
-| G1 | Oyun fiziği birim testleri: sıfır-sızıntı, temas sırası, yerleşim değişmezleri, RNG ayrımı, bilgi sınırı casusu | yapılacak |
-| G2 | Kör temel çizgi (World fiziğiyle uyumlu) + referans karşılaştırıcı çözülebilirliği | hesap yapıldı; oyun-dünyası üzerinde yapılacak |
+| G0 / S0 | Eski `World` + `Creature` davranışının **bit-bit** korunması (regresyon) | **tamam**: `agent.py` değişikliğinden önce/sonra aynı özet (sentetik `008a03d53b45c166`, bağlantı-tabanlı `a5eb9525e58a5bfa`, bu makinede); kalıcı test `tests/test_s0_regression.py` (takma ad yolu bit-bit eşit) |
+| G1 | Oyun fiziği birim testleri: sıfır-sızıntı, temas sırası, yerleşim değişmezleri, RNG ayrımı, bilgi sınırı casusu, CRN | **tamam**: `src/sinek/games/` + `tests/test_games_world.py` (tam test paketi geçti) |
+| G2 | Kör temel çizgi (World fiziğiyle uyumlu) + referans karşılaştırıcı çözülebilirliği | **tamam (ilk bakış, T=25 sn, dev tohumu 101, 400 deneme)**: kör ≈0,30; referans O1R 0,82 · O1a 0,96 · O1b 0,94 · O2tam 0,70 · O2yakın 0,83; anosmik = kör (CRN). Kör gezgin iki bağımsız uygulamada uyuşuyor (testle) |
 | G3 | Pilot (dev tohumları): T, W, λ, R seçimi; sıfır-koku dönüş yanlılığı tanısı | bekliyor |
 | G4 | `power_odor.py` + `docs/odor_guc_analizi.md` | bekliyor |
 | G5 | Oyun-başına ön-kayıt commit | bekliyor |

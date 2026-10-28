@@ -24,11 +24,13 @@ class Creature:
         self.turn_gain = torch.full((world.B,), cfg.motor.turn_gain, device=world.device)
         self.last_valence = torch.zeros(world.B, 2, device=world.device)
 
-    def reset_episode(self, mode: str) -> None:
+    def reset_episode(self, mode: str, **kw) -> None:
         if mode == "forage":
             self.world.reset_forage()
         elif mode == "choice":
             self.world.reset_choice()
+        elif mode == "game":     # oyun dünyaları (sinek.games): yerleşim kendi RNG akışından
+            self.world.reset_game(**kw)
         else:
             raise ValueError(mode)
         self.brain.reset_state()
@@ -38,8 +40,9 @@ class Creature:
         m = self.cfg.motor
         v_l, v_r = valence[:, 0], valence[:, 1]
         contrast = (v_l - v_r) / (v_l.abs() + v_r.abs() + m.contrast_eps)
+        gen = getattr(self.world, "noise_gen", self.world.gen)   # oyun dünyaları gürültüyü yerleşimden ayrı akıştan çeker (CRN)
         noise = m.wander_sigma * torch.randn(
-            self.world.B, generator=self.world.gen, device=self.world.device
+            self.world.B, generator=gen, device=self.world.device
         ) / self.cfg.world.dt ** 0.5
         return self.turn_gain * contrast + noise
 
