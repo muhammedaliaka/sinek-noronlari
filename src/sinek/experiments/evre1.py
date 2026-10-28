@@ -66,7 +66,7 @@ def run(a: argparse.Namespace, cfg: Config, patterns=None, title: str = "Evre 1"
     evaluator = evaluator or evaluate
     renderer = renderer or render_summary
     if a.quick:
-        a.agents, a.episodes, a.reversal_episodes = 3, 2, 2
+        a.agents, a.episodes, a.reversal_episodes = 4, 2, 2   # çift: rol dengelemesiyle de çalışır
         a.episode_seconds, a.trials, a.test_seconds, a.test_every = 15.0, 2, 15.0, 1
     t0 = time.time()
     out = Path(a.out)
@@ -99,6 +99,7 @@ def run(a: argparse.Namespace, cfg: Config, patterns=None, title: str = "Evre 1"
         for k in range(1, n_eps + 1):
             tl = P.train(creature, 1, a.episode_seconds, rewards)
             c = tl.contact_array()[0]
+            assert c.shape[-1] == 2, "rol eşlemesi iki koku varsayar"
             c = np.where(swap[:, None], c[:, ::-1], c)    # koku -> rol (A/B)
             for cond in P.CONDITIONS:
                 contacts_by_cond[cond].append(c[cond_arr == cond].mean(0))
@@ -117,7 +118,7 @@ def run(a: argparse.Namespace, cfg: Config, patterns=None, title: str = "Evre 1"
     after_a_res = P.ChoiceResult(
         np.array(after_a_stage["n_a"]), np.array(after_a_stage["n_b"]), a.trials, np.zeros(len(conds))
     )
-    traj_after_a = P.record_trajectories(creature, _pick(conds, "plastic", 6), a.test_seconds)
+    traj_after_a = P.record_trajectories(creature, [i for i in _pick(conds, "plastic", 6) if not swap[i]], a.test_seconds)
 
     # ---- C. bellek kalıcılığı ---------------------------------------------------
     ck = checkpoint.save(creature, out / "after_A.npz", extra={"phase": "after_A"})
@@ -133,7 +134,7 @@ def run(a: argparse.Namespace, cfg: Config, patterns=None, title: str = "Evre 1"
     # ---- B. ödül tersine çevirme ---------------------------------------------
     rev_start = a.episodes
     train_block(rev_start, a.reversal_episodes, (0.0, 1.0), "B")
-    traj_after_b = P.record_trajectories(creature, _pick(conds, "plastic", 6), a.test_seconds)
+    traj_after_b = P.record_trajectories(creature, [i for i in _pick(conds, "plastic", 6) if not swap[i]], a.test_seconds)
 
     # ---- ölçütler -------------------------------------------------------------
     verdict = evaluator(stages, a, conds, identical and w_equal)

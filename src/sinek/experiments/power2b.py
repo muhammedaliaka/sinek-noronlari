@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import argparse
 import types
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -33,7 +33,7 @@ class Scenario:
     swap: bool = True
 
 
-def _group(rng, n, mu, kappa, r, T, bias_sign=None):
+def _group(rng, n, mu, kappa, r, T):
     """n canlı: p_i ~ Beta; seçim sayısı ~ Binom(T, r); A sayısı ~ Binom(seçim, p_i)."""
     mu = np.clip(mu, 1e-3, 1 - 1e-3)
     p = rng.beta(mu * kappa, (1 - mu) * kappa, n) if np.isfinite(kappa) else np.full(n, mu)

@@ -23,8 +23,21 @@ def _last_a(r: dict) -> dict:
     return next(s for s in reversed(r["stages"]) if s["phase"] == "A")
 
 
+DESIGN_KEYS = ("agents", "trials", "episodes", "reversal_episodes", "test_every", "test_seconds", "episode_seconds", "swap_roles")
+
+
+def _check_same_design(real: dict, shuf: dict) -> None:
+    """Farkın yalnızca sınıf karıştırmasından gelebilmesi için tasarım ve hareket okuması aynı olmalı (koku çifti hariç)."""
+    bad = [k for k in DESIGN_KEYS if real["args"].get(k) != shuf["args"].get(k)]
+    if real["config"].get("motor") != shuf["config"].get("motor"):
+        bad.append("motor")
+    if bad:
+        raise ValueError(f"E1 karşılaştırması farklı tasarımlar arasında yapılamaz: {bad}")
+
+
 def compare(real: dict, shuf: dict) -> dict:
     """Gerçek ve karıştırılmış sonuç sözlüğü (results.json içeriği) için E1 karşılaştırması."""
+    _check_same_design(real, shuf)
     na, ns = real["args"]["agents"], shuf["args"]["agents"]
     g_r = agent_counts(_last_a(real), na, "plastic")
     g_s = agent_counts(_last_a(shuf), ns, "plastic")

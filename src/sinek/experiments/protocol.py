@@ -105,7 +105,7 @@ def make_test_creature(creature: Creature, agents: torch.Tensor, seed: int) -> C
         creature.cfg.world, len(idx), seed, str(creature.world.device),
         patterns=creature.world.patterns,
     )
-    world.swap = creature.world.swap[idx.to(creature.world.swap.device)].clone()   # rol dengelemesi taşınır
+    world.set_swap(creature.world.swap[idx.to(creature.world.swap.device)])   # rol dengelemesi taşınır
     test = Creature(creature.cfg, creature.brain.select(idx), world)
     test.turn_gain = creature.turn_gain[idx.to(creature.turn_gain.device)].clone()
     return test
@@ -188,7 +188,11 @@ def summarize(res: ChoiceResult, conditions: Sequence[str]) -> dict:
 def record_trajectories(
     creature: Creature, agents: Sequence[int], seconds: float = 40.0, seed: int = 4242
 ) -> dict:
-    """Seçili canlıların seçim testindeki yollarını kaydeder (görselleştirme için)."""
+    """Seçili canlıların seçim testindeki yollarını kaydeder (görselleştirme için).
+
+    `src_pos` koku sırasındadır ([koku 0, koku 1]); rol dengelemesi (`swap`) uygulanmış canlıları çizerken A/B etiketleri ters olur,
+    bu yüzden çağıran yalnızca `swap` olmayan canlıları seçmelidir (evre1.py öyle yapar).
+    """
     cfg = creature.cfg
     test = make_test_creature(creature, torch.as_tensor(list(agents), dtype=torch.long), seed)
     world = test.world
