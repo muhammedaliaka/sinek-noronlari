@@ -9,7 +9,7 @@ Yöntem: web araması + sayfa alıntısı. Etiketler CLAUDE.md kural 4'e göredi
 | BANC Nature'da yayımlandı ("Distributed control circuits across a brain-and-cord connectome", 8 Haz 2026) | [doğrulandı: arama özeti; DOI 10.1038/s41586-026-10735-w] | tam metin açılmadı |
 | BANC ≈ **158 262 nöron** / ≈160 bin | [doğrulandı: iki bağımsız haber/blog özeti] | yalnız ikincil kaynak |
 | BANC ≈ **188 000 nöron, 199 milyon sinaps** (kullanıcı raporundaki rakam) | **[doğrulanmadı]** | aranan kaynaklarda bulunamadı; 188 000 sayısı muhtemelen farklı bir sayım ölçütüdür (parça dahil vb.) — kanıt yok |
-| BANC "10⁸ sinaps" | [doğrulandı: yalnız anlam] | Nature girişi 10⁸'i **bütün sinek** için anıyor (bir haber metninde üs eksikti); BANC veri kümesi için kesin sinaps sayısı bulunamadı. Bir haberde ">3 milyon sinaptik bağlantı" geçiyor — bu BANC için güvenilmez görünüyor [doğrulanmadı] |
+| BANC "10⁸ sinaps" | [doğrulandı: yalnız anlam] | Nature girişi 10⁸'i **bütün sinek** için anıyor (bir haber metninde üs eksikti); BANC veri kümesi için kesin sinaps sayısı bulunamadı. Bir haberde ">3 milyon sinaptik bağlantı" geçiyor — tek kaynak, makaleyle karşılaştırılmadı [doğrulanmadı] |
 | veri çevrimiçi serbest | [doğrulandı: haber] | lisans türü bulunamadı |
 
 **Sonuç:** karar değişmez (K-… birleştirme kararı nöron sayısına dayanmaz, kural 4). BANC için kesin nöron/sinaps rakamları ve lisans, Nature makalesi/FlyWire Codex indirme sayfasından elle doğrulanana dek "[doğrulanmadı]" kalır. Tuthill laboratuvarı PDF'i 10 MB sınırını aştığı için otomatik okunamadı.
