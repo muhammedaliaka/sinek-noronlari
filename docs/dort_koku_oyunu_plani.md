@@ -130,7 +130,7 @@ Her oyun için: **G** (geçerlilik kapıları) ve **P** (birincil ölçütler), 
 | Oyun | Geçerlilik kapıları | Birincil ölçütler |
 |---|---|---|
 | O1 | G1 referans `p_hit≥0,80` ve anosmik ∈[0,15; 0,45]; G0 S0 regresyon | P1 frozen(koku açık) − anosmik: eşli %99 GA alt sınırı >0 ve ≥δ₁; P2 aynısı vs `random`; P3 ayna yarılarının *her ikisinde* fark >0 |
-| O2 | G1 (referans, O2-yakın `p_hit≥0,80`), G2 **CRN: ilk koku alımına dek yörüngeler bit-bit aynı (%100)**, kör bölgeye giriş ∈[0,3; 0,9] | P1 O2-yakın: koku açık − anosmik `p_hit` farkı (eşli, α=0,01, ≥δ₂) |
+| O2 | G1 tasarım-zamanı (referans, O2-yakın `p_hit≥0,80`, geliştirme tohumunda n≥900) + doğrulayıcı tabanı referans ≥0,70 (K-024); G2 **CRN: ilk koku alımına dek yörüngeler bit-bit aynı (%100)**; kör bölgeye giriş ∈[0,3; 0,9] (O2-tam, tasarım-zamanı) | P1 O2-yakın: koku açık − anosmik `p_hit` farkı (eşli, α=0,01, ≥δ₂) |
 | O3 | G3 ön-temas `glom≡0` (%100), temas→etki sırası testi | E3 tüm kol çiftlerinde `|Δp_hit|` GA ⊂ [−δ_eq, δ_eq]; kör düzey raporu |
 | O4a | G4 çekim odası | P1 plastic − frozen decoy `p_hit` (eşli, ≤ −δ₄); ikincil: bölüm eğilimi |
 | O4c | G3-benzeri, G4 | P1 decoy-ilk oranı plastic<frozen−δ₄; P2 gerçek-ilk oranı kör düzeyin δ_eq altına düşmemeli |
