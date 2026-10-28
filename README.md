@@ -178,6 +178,7 @@ python -m sinek.experiments.evre2b --seed 30 --threads 2 --out results\evre2b_s3
 |---|---|---|
 | 1 | Sentetik mantar cismi devresi, 2B dünya, koku/ödül öğrenme, tersine çevirme, bellek | **tamam** (6/6 ve 6/6) |
 | 2 / 2b | Gerçek bağlantı verisi (MaleCNS v1.0): lisans ve sürüm doğrulaması, mantar cismi alt ağı, koku/ödül öğrenme | v1: ölçütler kısmen karşılandı (5/6 ve 4/6, ölçüm gücü sorunu); **Evre 2b (yeni ön-kayıt): 7/7 ve 7/7 geçti** |
+| 2c | **Dört koku oyunu** (O1 iz, O2 yalnız final bölgesi, O3 yalnız temas, O4 yanıltıcı koku): koku algısı, kokuyla yön bulma, kokusuz arama, sönüm ayrı ayrı ölçülür | plan incelendi ([`docs/dort_koku_oyunu_plani.md`](docs/dort_koku_oyunu_plani.md), kullanıcı taslağı: `docs/girdi/`); uygulama G0'dan başlıyor, ön-kayıt henüz yok |
 | 3 | Açlık/enerji ihtiyaçları, serbest keşif; seçilmiş devre birleştirme; 10–20 bin özel nöron + ablasyon deneyleri | planlı |
 | 4 | FlyGym ile 3B beden | planlı |
 
