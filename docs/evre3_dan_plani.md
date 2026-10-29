@@ -95,3 +95,10 @@ Yorum: K=8 + kısa τ, gürültüsüz tablo düzeyine (≈0,8) ulaşıyor; yani 
 | O2-yakın (115) | 0,333 | 0,698 | **0,729** | 0,812 | +0,396 [+0,292; +0,484] |
 
 O1b'de O1a'daki kazanç yinelendi (+0,18, K=1 aynı τ'ya göre). **O2-yakın'da kazanç küçük (+0,03) ve referans tavanı 0,81'e yakın**: taban ile referans arasında zaten ≈0,11–0,15 boşluk var, yani "ölçek kazancı ≥ δ=0,15" ölçütü bu oyunda tavan etkisiyle sınanamaz (güç benzetimi: δ'da 0,07). Bu yüzden ön-kayıtlı ölçek doğrulayıcısı (`docs/olcek_plani.md`, K-036) O2-yakın'ı kapsam dışı bıraktı.
+
+### 6.3 Kalan boşluk: sonraki geliştirme adımı için ÖNCEDEN yazılmış kuram (R-8; henüz sınanmadı)
+K=8 + τ=0,04 ile frozen kolu gürültüsüz tablo düzeyine (≈0,8) çıkıyor; referans 0,96–0,98. Yani artık boşluğun (≈0,17–0,19) kaynağı **okuma gürültüsü değil**. Aday açıklamalar (hepsi SINANMADI, sıralama tahmin):
+* **H1 — öğrenilmiş değer fonksiyonunun kalitesi.** Ön-eğitim 12 bölüm; değer eğrisinin koku yoğunluğuna göre eğimi zayıf/düz olabilir. Sınama: gürültüsüz tablonun (oracle) başarısı ön-eğitim bölüm sayısı ve plastisite öğrenme oranı η ile nasıl değişiyor (tablo, 5 nokta). "En hızlı öğrenen" hedefi doğrudan buna bağlıdır: p_hit'i bölüm sayısına karşı çizmek, öğrenme hızının ilk gerçek ölçümüdür.
+* **H2 — motor kuralı.** `contrast = (v_L − v_R)/(|v_L|+|v_R|+ε)` normalleştirir; değerler ε=0,05'e yakınsa dönüş zayıflar, büyükse işaret gürültüsü (±1) doğrudan dönüş hızına geçer. `turn_gain=10`, `wander_σ=1` elle seçilmiştir. Sınama: gürültüsüz tablo ile ε ∈ {0,01; 0,05; 0,2} × `turn_gain` ∈ {5; 10; 20} (geliştirme tohumunda; sonra hangi parametrenin doğrulayıcıda sabitleneceği yeni ön-kayıtta).
+* **H3 — sensör SNR'si.** Anten arası mesafe × gradyan; referans ayrıca gradyanı kusursuz kullanıyor. Sınama: referans kolunu aynı anten gürültüsüyle koşmak ("sensör sınırı") — referans zaten sensörsüz (dünyayı doğrudan okur) ise bu sınır ölçülemez; bu durumda H3 ayrıştırılamaz ve bu bir sınırlılık olarak yazılır.
+* Doğrulayıcı kuralı: bu sınamalar geliştirme tohumlarındadır (100-149); ayarlardan biri doğrulayıcıya girecekse yeni ön-kayıt + güç benzetimi gerekir (R-1, R-6).
