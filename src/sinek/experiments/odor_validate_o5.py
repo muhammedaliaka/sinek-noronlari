@@ -5,6 +5,7 @@
 
 Kollar (CRN eşli, her eleman bağımsız bir yaşam): plastic (öğrenmemiş beyin, öğrenme AÇIK), frozen (öğrenmemiş beyin, öğrenme kapalı), reference (elle kurulmuş izleyici; tersine çevirmede takip ettiği kokuyu değiştirir).
 Canlılar `--chunks` parçaya bölünür (parça başına dünya tohumu seed + 1000·c, tüm kollarda aynı); kol × parça kontrol noktası (K-037 deseni).
+GELİŞTİRME (yalnız --pilot): `--ens-k/--ens-tau` ile ek `plastic_ens` kolu (PlasticEnsembleBrain), `--only-chunks` ile parça paralelliği; kontrol noktası anahtarı yalnız bu kol için ayrışır.
 Eşikler ve tasarım ön-kayıttadır; bu komut onları keşfetmez. `--pilot`: geliştirme tohumlarında (<200) deneme; doğrulayıcı tohumlar (≥200) `--pilot` olmadan.
 """
 from __future__ import annotations
@@ -18,6 +19,7 @@ import numpy as np
 import torch
 
 from .. import checkpoint
+from ..ensemble import PlasticEnsembleBrain
 from ..games.protocol import ARMS, bandit_schedule, make_game_creature, play_sequence
 from .odor_eval import EVALUATORS, O5_BLOCKS, Thr
 from .odor_validate import _git_head, _sha
@@ -36,33 +38,43 @@ def _chunks(n: int, chunks: int) -> list[list[int]]:
 
 
 def run_arms(pre, seed: int, agents: int, copies: int, episodes: int, switch: int, seconds: float, p_hi: float, p_lo: float, chunks: int,
-             plastic_scale: float = 1.0, only=None, verbose=True, part_dir=None, key: str = "") -> dict:
+             plastic_scale: float = 1.0, only=None, verbose=True, part_dir=None, key: str = "", ens_k: int = 1, ens_tau=None, only_chunks=None) -> dict:
+    """`ens_k > 1` (veya `ens_tau`): GELİŞTİRME kolu `plastic_ens` = plastic + `PlasticEnsembleBrain` (yalnız `--pilot`); varsayılan üç kol değişmez.
+    `only_chunks`: yalnız bu parçaları koş (paralel işçiler için; kontrol noktası yazar, birleştirme yapılmaz)."""
     parts = _chunks(min(agents, pre.world.B), chunks)
+    arm_defs = dict(ARM_DEFS)
+    if ens_k > 1 or ens_tau is not None:
+        arm_defs["plastic_ens"] = ("naive_plastic", True)
     res, t0 = {}, time.time()
-    for name, (arm, _) in ARM_DEFS.items():
+    for name, (arm, _) in arm_defs.items():
         if only and name not in only:
             continue
         pieces = []
         for ci, ids in enumerate(parts):
-            path, z = _part(part_dir, f"o5_{name}_c{ci}", key)
+            if only_chunks is not None and ci not in only_chunks:
+                continue
+            path, z = _part(part_dir, f"o5_{name}_c{ci}", key + (f"|ens_k={ens_k}|ens_tau={ens_tau}" if name == "plastic_ens" else ""))
             if z is not None:
                 pieces.append({k: z[k] for k in KEYS})
                 if verbose:
                     print(f"[{time.time() - t0:6.0f}s] O5 {name:<9} parça {ci + 1}/{chunks} kontrol noktasından okundu", flush=True)
                 continue
             c = make_game_creature(pre, "O5", arm, ids, copies, seed + CHUNK_STRIDE * ci)
-            if name == "plastic":
+            if name in ("plastic", "plastic_ens"):
                 c.brain.eta_scale = torch.full((c.world.B,), float(plastic_scale))
+            if name == "plastic_ens":
+                c.brain = PlasticEnsembleBrain(c.brain, ens_k, ens_tau)
             sch = bandit_schedule(c.world.swap.cpu(), episodes, switch, p_hi, p_lo)
-            r = play_sequence(c, sch, seconds, learn=ARMS[arm].eta > 0 and (name != "plastic" or plastic_scale > 0),
+            r = play_sequence(c, sch, seconds, learn=ARMS[arm].eta > 0 and (name not in ("plastic", "plastic_ens") or plastic_scale > 0),
                               flip_swap_at=switch if name == "reference" else None)
             r["better"] = np.stack([(p[:, 1] > p[:, 0]).numpy().astype(int) for p in sch])
             pieces.append({k: r[k] for k in KEYS})
             if path is not None:
-                np.savez(path, key=key, **pieces[-1])
+                np.savez(path, key=key + (f"|ens_k={ens_k}|ens_tau={ens_tau}" if name == "plastic_ens" else ""), **pieces[-1])
             if verbose:
                 print(f"[{time.time() - t0:6.0f}s] O5 {name:<9} parça {ci + 1}/{chunks}: ödül oranı {pieces[-1]['got'].mean():.3f}", flush=True)
-        res[name] = {k: np.concatenate([p[k] for p in pieces], axis=1) for k in KEYS}      # (bölüm, yaşam)
+        if pieces:
+            res[name] = {k: np.concatenate([p[k] for p in pieces], axis=1) for k in KEYS}      # (bölüm, yaşam)
     return res
 
 
@@ -91,6 +103,30 @@ def blocks_table(res: dict, size: int = 5) -> list[str]:
 def blocks_for(episodes: int, switch: int) -> tuple:
     """Geç faz-1 = tersine çevirmeden önceki yarı, geç faz-2 = sonraki yarı. Varsayılan tasarımda (40 bölüm, 20'de tersine çevirme) = O5_BLOCKS."""
     return ((switch // 2, switch), (switch + (episodes - switch) // 2, episodes))
+
+
+def ens_section(res: dict, thr: Thr, blocks=O5_BLOCKS) -> list[str]:
+    """GELİŞTİRME (yalnız --pilot): plastic_ens betimsel değerlendirmesi ve plastic ile eşli fark (kanıt değildir)."""
+    from .stats import paired_cluster_ci
+    h = to_h(res)
+    ev = EVALUATORS["O5"]({**h, "plastic": h["plastic_ens"], "net_plastic": h["net_plastic_ens"]}, thr, blocks=blocks)
+    cols = np.r_[blocks[0][0]:blocks[0][1], blocks[1][0]:blocks[1][1]]
+    L = ["", "## GELİŞTİRME: `plastic_ens` (PlasticEnsembleBrain) — kanıt değildir", "", "`plastic_ens − frozen` (ön-kayıtlı ölçüt kuralıyla, betimsel):", ""]
+    for k, c in ev["criteria"].items():
+        L.append(f"- {'✔' if c['passed'] else '✘'} {k}: fark {c['mean']:+.3f} [GA {c['ci'][0]:+.3f}, {c['ci'][1]:+.3f}], p={c['p']:.4f}")
+    L += ["", "`plastic_ens − plastic` (eşli, aynı dünyalar; yaşam birimli küme bootstrap %99 GA):", "", "| ölçü | fark [GA] |", "|---|---|"]
+    r_e, r_p = res["plastic_ens"], res["plastic"]
+    def late(r):
+        slot, better, got = (r[k][cols].T for k in ("slot", "better", "got"))
+        contact = slot >= 0
+        good = contact & (slot == better)
+        return {"ödül oranı": got.astype(float), "temas oranı": contact.astype(float), "net tercih": good.astype(float) - (contact & ~good).astype(float)}
+    le, lp = late(r_e), late(r_p)
+    for k in le:
+        m, lo, hi = paired_cluster_ci(le[k].sum(1), lp[k].sum(1), le[k].shape[1], n=thr.n_boot, seed=11, alpha=thr.alpha)
+        L.append(f"| {k} | {m:+.3f} [{lo:+.3f}; {hi:+.3f}] |")
+    L += ["", "Mutlak (geç bloklar): " + "; ".join(f"{a}: ödül {late(res[a])['ödül oranı'].mean():.3f}, temas {late(res[a])['temas oranı'].mean():.3f}" for a in ("plastic_ens", "plastic", "frozen"))]
+    return L
 
 
 def evaluate(res: dict, thr: Thr, blocks=O5_BLOCKS) -> dict:
@@ -127,6 +163,9 @@ def main(argv=None) -> dict | None:
     ap.add_argument("--delta", type=float, default=0.10)
     ap.add_argument("--ref-min", type=float, default=0.60)
     ap.add_argument("--boot", type=int, default=10000)
+    ap.add_argument("--ens-k", type=int, default=1, help="GELİŞTİRME (--pilot): plastic_ens kolu için topluluk büyüklüğü")
+    ap.add_argument("--ens-tau", type=float, default=None, help="GELİŞTİRME (--pilot): plastic_ens okuma entegrasyon süresi (sn)")
+    ap.add_argument("--only-chunks", default=None, help="virgülle parça indeksleri: yalnız bu parçaları koş (kontrol noktası yazar), değerlendirme yok")
     ap.add_argument("--only-arms", default=None, help="virgülle: yalnız bu kolları koş (kontrol noktası yaz), değerlendirme yok")
     ap.add_argument("--pilot", action="store_true")
     ap.add_argument("--threads", type=int, default=None)
@@ -136,6 +175,9 @@ def main(argv=None) -> dict | None:
         raise SystemExit("--pilot yalnız geliştirme tohumlarıyla (<200)")
     if a.seed < 200 and not a.pilot:
         raise SystemExit("200 altı tohum doğrulayıcı olamaz: --pilot ekleyin (R-2)")
+    ens = a.ens_k > 1 or a.ens_tau is not None
+    if ens and not a.pilot:
+        raise SystemExit("--ens-k/--ens-tau geliştirme seçenekleridir: yalnız --pilot ile (ön-kayıtlı doğrulayıcıda yok)")
     if a.threads:
         torch.set_num_threads(a.threads)
     thr = Thr(delta=a.delta, ref_min=a.ref_min, n_boot=a.boot, n_perm=a.boot)
@@ -146,13 +188,17 @@ def main(argv=None) -> dict | None:
                       "p_lo": a.p_lo, "chunks": a.chunks, "plastic_scale": a.plastic_scale, "pre_sha": _sha(a.pre)}, sort_keys=True)
     t0 = time.time()
     only = set(a.only_arms.split(",")) if a.only_arms else None
-    res = run_arms(pre, a.seed, a.agents, a.copies, a.episodes, a.switch, a.seconds, a.p_hi, a.p_lo, a.chunks, a.plastic_scale, only, part_dir=out / "partial", key=key)
-    if only:
+    only_chunks = {int(x) for x in a.only_chunks.split(",")} if a.only_chunks else None
+    res = run_arms(pre, a.seed, a.agents, a.copies, a.episodes, a.switch, a.seconds, a.p_hi, a.p_lo, a.chunks, a.plastic_scale, only, part_dir=out / "partial", key=key,
+                   ens_k=a.ens_k, ens_tau=a.ens_tau, only_chunks=only_chunks)
+    if only or only_chunks is not None:
         return None
     blocks = blocks_for(a.episodes, a.switch)
     ev = evaluate(res, thr, blocks)
     meta = {"stamp": "**PİLOT — kanıt değildir.**" if a.pilot else "Doğrulayıcı koşu.", "pre": a.pre, "pre_sha": _sha(a.pre), "git": _git_head(), "switch": a.switch, "blocks": blocks}
     text = report(a.seed, res, ev, thr, meta, blocks)
+    if ens:
+        text += "\n".join(ens_section(res, thr, blocks)) + "\n"
     (out / "summary.md").write_text(text, encoding="utf-8")
     (out / "results.json").write_text(json.dumps({"args": vars(a), "meta": meta, "eval": ev,
                                                   "reward_rate": {k: float(v["got"].mean()) for k, v in res.items()},

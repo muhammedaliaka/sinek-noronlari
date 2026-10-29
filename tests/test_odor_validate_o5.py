@@ -39,3 +39,18 @@ def test_validator_chunked_resume_zero_effect_and_guards(cfg, tmp_path):
     for bad in (["--seed", "150"], ["--seed", "260", "--pilot"]):
         with pytest.raises(SystemExit):
             V5.main(["--pre", "yok.npz", "--out", str(tmp_path / "o"), *bad])
+
+
+def test_optional_plastic_ens_arm_only_in_pilot_and_chunk_parallel(cfg, tmp_path):
+    pre = pretrain(cfg, odor_patterns(cfg.world, 3), 4, seed=3, episodes=1, seconds=4.0)
+    kw = dict(seed=150, agents=4, copies=2, episodes=4, switch=2, seconds=20.0, p_hi=0.8, p_lo=0.2, chunks=2, verbose=False, part_dir=tmp_path, key="e")
+    base = V5.run_arms(pre, **kw)
+    assert "plastic_ens" not in base                                                                                # varsayılan: üç kol, davranış değişmedi
+    a = V5.run_arms(pre, only=("plastic_ens",), ens_k=2, only_chunks={0}, **kw)
+    assert a["plastic_ens"]["slot"].shape == (4, 4)                                                                 # yalnız parça 0 (4 yaşam)
+    assert (tmp_path / "o5_plastic_ens_c0.npz").exists() and not (tmp_path / "o5_plastic_ens_c1.npz").exists()
+    b = V5.run_arms(pre, only=("plastic_ens",), ens_k=2, **kw)                                                      # parça 0 kontrol noktasından, parça 1 yeni
+    assert b["plastic_ens"]["slot"].shape == (4, 8) and np.array_equal(b["plastic_ens"]["slot"][:, :4], a["plastic_ens"]["slot"])
+    for bad in (["--ens-k", "2"], ["--ens-tau", "0.04"]):
+        with pytest.raises(SystemExit):
+            V5.main(["--pre", "yok.npz", "--seed", "260", "--out", str(tmp_path / "o"), *bad])
