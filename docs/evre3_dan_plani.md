@@ -146,3 +146,27 @@ Motor kuralı taraması (aynı gürültüsüz tablo; satır ε, sütun turn_gain
 * K=1'de küçük ε **zarar veriyor** (0,58 → 0,20–0,50): işaret gürültüsü doğrudan dönüş hızına geçiyor.
 * **Kör karşılaştırıcı çöküyor:** anosmik p_hit 0,286 → 0,005–0,12 (koku yokken bile değer gürültüsü kontrastı ±1'e taşıyor; yaratık yerinde dönüyor). Bu "koku kazancı"nı (frozen − anosmik) yapay olarak şişirir (+0,75…+0,89) ve O1 anosmik-pencere kapısını (0,15–0,45) bozar; yani ölçütler bu motorla yeniden tasarlanmak zorunda kalırdı.
 * **Karar (K-039):** motor ε/kazanç ayarı doğrulayıcıya **alınmadı**; kazanç küçük, tek örneklem ve kör karşılaştırıcıyı bozuyor. ε, gürültü tabanına (≈ okuma SD'si) göre seçilmiş bir ölü-bölge gibi çalıştığı için mevcut ε=2 savunulabilir bir ayar. GPU aşamasında (K ≥ 16, daha az gürültü) ε–K birlikte taranmalıdır; o zaman kör karşılaştırıcı için ayrı bir tanım (ör. eşleşmiş-gürültü kör kol) gerekir.
+
+## 7. Öğrenme HIZI ölçümü (geliştirme, tohum 101; 6 canlı × 3 koku çifti; KANIT DEĞİL)
+Araç: `python3 -I -m sinek.experiments.ogrenme_hizi` (`dan_dev` protokolü; her denemeden sonra öğrenmesi kapalı test; ölçüte ilk ulaşılan deneme: edinim sel=V_A−V_B ≥ 0,20; sönüm sel ≤ yarısı; tersine çevirme V_B−V_A ≥ 0,20; hücre: ortanca (ortalama; sansürlü oranı), en çok 12 deneme). Öğrenme ölçeği = öğrenme oranı η çarpanı (1 = doğrulayıcı beyni). **Tahmin koddan önce yazıldı** (araç docstring'i).
+
+| varyant | ölçek | edinim | sönüm | tersine çevirme | plato sel | sahte öğretmen |
+|---|---|---|---|---|---|---|
+| V0 (elle δ) | 0,01 | 13 (sansür %56) | 1 | 13 (%78) | +0,04 | 0 |
+| V0 | 0,03 | 11 (%44) | 3 | 13 (%78) | +0,13 | 0 |
+| V0 | 0,1 | 4 | 3 | 6 | +0,29 | 0 |
+| V0 | 0,3 | 2 | 2 | 2 | +0,39 | 0 |
+| V0 | **1 (mevcut)** | **1** | **1** | **1** | +0,39 | 0 |
+| V0 | 3 | 1 | 1 | 1 | +0,37 | 0 |
+| V2/− g_mbon=0,03 | 0,03 | 12 (%50) | 2 | 13 (%72) | +0,09 | 0,053 |
+| V2/− | 0,1 | 4 | 6 | 9 | +0,27 | 0,049 |
+| V2/− | 0,3 | 2 | 4 | 3 | +0,44 | 0,046 |
+| V2/− | 1 | 1 | 2 | 1 | +0,58 | 0,041 |
+| V2/− | 3 | 1 (ortalama 1,0) | 1 (ortalama 2,8; %6 sansür) | 1 | +0,72 | 0,038 |
+
+Okuma (dürüst):
+* **Tahmin büyük ölçüde doğru:** küçük ölçeklerde süre ≈ 1/ölçek (0,1→4, 0,3→2, 1→1), plato ölçekten bağımsız. Tersine çevirme küçük ölçeklerde edinimden yavaş (0,1: 6 vs 4; 0,03: sansürlü 13), ölçek ≥0,3'te eşit — bu kısım **kısmen yanlış çıktı**: tavan etkisi tersine çevirmenin ek maliyetini gizliyor.
+* **Mevcut beyin bu protokolde zaten tek denemede öğreniyor, söndürüyor ve tersine çeviriyor (tavan).** Yani bu protokolde öğrenme oranını artırmak hız kazandırmaz; "daha hızlı öğrenen" iddiası bu kadar kolay bir görevle sınanamaz. Hız farkı ancak **zor** görevlerde ortaya çıkar: seyrek/olasılıklı ödül, gecikmiş ödül, çok koku (karışma), bir oturumda tersine çevirme.
+* V2/− (MBON→DAN geri besleme) hızı değiştirmeden **plato yükseltiyor** (0,39 → 0,58 → 0,72) ama sönümü yavaşlatıyor ve küçük bir sahte öğretmen (≈0,04–0,05) getiriyor — §5 bulgusuyla tutarlı.
+* Ölçek ≥3'te aşırı genelleme/kararsızlık görülmedi (V0 sahte öğretmen 0); sınır daha büyük ölçeklerde aranabilir.
+* **Sonraki adım (tasarım):** hız farkını görünür kılan görev = **olasılıklı ödül + oturum içi tersine çevirme** (iki-kollu kuşatma/bandit: A %80, B %20 ödül; 20 denemede tersine çevirme). Metrikler: kümülatif pişmanlık, tersine çevirme sonrası adaptasyon denemesi. Bu yeni bir oyun (O5) olur: ön-kayıt + güç benzetimi gerektirir; plastik kollar oyun içinde öğrenir.
