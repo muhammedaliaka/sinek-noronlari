@@ -71,3 +71,19 @@ Her nokta tek örneklemdir (192 deneme; kümeli standart hata ≈0,04–0,05): �
 
   Uzun entegrasyon (≥0,3 sn) açıkça kötü (hareket eden canlı için gradyan bulanıyor, gecikme); kısa τ=0,04 iki tohumda da varsayılandan ≈+0,06–0,07 iyi ama τ=0,08 bu sırayı bozuyor (tek örneklem gürültüsü). Varsayılan τ **değiştirilmedi**: ön-kayıtlı doğrulayıcılar bu beyin tanımıyla koştu; τ değişirse yeni ön-kayıt gerekir (kural 2).
 
+### 6.2 Kısa τ + topluluk birlikte (geliştirme; KANIT DEĞİL)
+Topluluk (gürültü azaltma) ile kısa okuma süresi (gecikme azaltma) birbirini tamamlıyor: gürültü azalınca kısa τ'nun yarattığı ek gürültü artık sorun olmuyor.
+
+| ayar (O1a, frozen p_hit) | tohum 110 | tohum 111 |
+|---|---|---|
+| K=1, τ=0,15 (ön-kayıtlı doğrulayıcı beyin tanımı) | 0,510 | 0,552 |
+| K=1, τ=0,04 | 0,583 | 0,615 |
+| K=1, τ=0,02 | 0,578 | 0,589 |
+| K=8, τ=0,15 | 0,625 | — |
+| **K=8, τ=0,04** | **0,807** | **0,771** |
+| **K=8, τ=0,02** | **0,823** | — |
+| K=∞ tablo (τ=0,15) | 0,818 | — |
+| referans (elle kurulmuş) | 0,984 | 0,984 |
+
+Yorum: K=8 + kısa τ, gürültüsüz tablo düzeyine (≈0,8) ulaşıyor; yani frozen kolun tavanı artık referansa (0,98) uzaklığın çoğunu oluşturan başka bir şey (okumanın kendisi/hareket kuralı). Tek ön-eğitim hattı (dev tohumu 100), iki oyun tohumu; **doğrulayıcı koşulmadı**. Bu ayarın "beyin tanımı" olması için yeni ön-kayıt + bağımsız tohumlar gerekir (kural 2/3): sıradaki iş.
+
