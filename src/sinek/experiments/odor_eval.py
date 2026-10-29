@@ -131,4 +131,27 @@ def eval_scale(h: dict, thr: Thr, extra_gates: dict | None = None) -> dict:
     return r
 
 
-EVALUATORS = {"O1": eval_o1, "O2": eval_o2, "O3": eval_o3, "O4a": eval_o4a, "O4c": eval_o4c, "SC": eval_scale}
+O5_BLOCKS = ((10, 20), (30, 40))      # geç faz-1 (bölüm 11-20) ve geç faz-2 (bölüm 31-40): 0-tabanlı yarı açık aralıklar
+
+
+def eval_o5(h: dict, thr: Thr, extra_gates: dict | None = None, blocks=O5_BLOCKS) -> dict:
+    """O5 (olasılıklı iki-kollu, oturum içi tersine çevirme; docs/odor_o5_plani.md). h: kol → (yaşam, bölüm) 0/1 ödül alındı; plastic, frozen, reference;
+    net_plastic, net_frozen: (yaşam, bölüm) tercih skoru (+1 iyi koku seçildi, −1 kötü, 0 temas yok).
+    Kapı: referans geç bloklarda ödül oranı ≥ ref_min. Karar veren: P1/P2 plastic − frozen ödül oranı (geç faz-1 / geç faz-2) ≥ δ;
+    P3 özgüllük: net tercih skoru farkı (iki geç blok birlikte) için eşli işaret-çevirme p < α ve %99 GA alt sınırı > 0 (avantajın koku-ödül ayrımından geldiğini gösterir:
+    yalnız 'her kokuya yaklaşma' ödül oranını yükseltebilir ama net tercihi yükseltmez)."""
+    (a0, a1), (b0, b1) = blocks
+    cols = np.r_[a0:a1, b0:b1]
+    ref = np.asarray(h["reference"])[:, cols]
+    gates = {"referans_odul>=ref_min": bool(ref.mean() >= thr.ref_min), **(extra_gates or {})}
+    pl, fr = np.asarray(h["plastic"]), np.asarray(h["frozen"])
+    crit = {"P1_odul_gec_faz1": _superior(pl[:, a0:a1], fr[:, a0:a1], a1 - a0, thr, seed=7),
+            "P2_odul_gec_faz2": _superior(pl[:, b0:b1], fr[:, b0:b1], b1 - b0, thr, seed=8)}
+    npl, nfr = np.asarray(h["net_plastic"])[:, cols], np.asarray(h["net_frozen"])[:, cols]
+    m, lo, hi = paired_cluster_ci(_sums(npl), _sums(nfr), len(cols), n=thr.n_boot, seed=9, alpha=thr.alpha)
+    p = paired_signflip_p(_sums(npl), _sums(nfr), len(cols), n=thr.n_perm, seed=9, alternative="greater")
+    crit["P3_ozgullukte_net_tercih"] = {"mean": m, "ci": [lo, hi], "p": p, "passed": bool(p < thr.alpha and lo > 0)}
+    return _result(gates, crit)
+
+
+EVALUATORS = {"O1": eval_o1, "O2": eval_o2, "O3": eval_o3, "O4a": eval_o4a, "O4c": eval_o4c, "SC": eval_scale, "O5": eval_o5}

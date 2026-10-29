@@ -48,6 +48,28 @@ def sim_slots(rng, pd_by_arm: dict, A: int, T: int, indep: float) -> dict:
     return out
 
 
+# O5 benzetim girdileri (geliştirme pilotu, tohum 120; docs/odor_o5_plani.md): kol → blok başına (temas olasılığı, iyi koku seçme olasılığı); bloklar 10'ar bölüm
+O5_P_HI, O5_P_LO = 0.8, 0.2
+O5_PILOT = {"plastic": [(0.55, 0.55), (0.70, 0.65), (0.60, 0.40), (0.72, 0.67)], "frozen": [(0.47, 0.48)] * 4, "reference": [(0.97, 0.97)] * 4}
+
+
+def sim_o5(rng, spec: dict, A: int, skill_sd: float = 0.08) -> dict:
+    """spec: kol → 4 blok × (temas olasılığı, iyi seçme olasılığı). Her yaşam her blokta canlıya özgü beceri sapması alır; kollar bağımsız (CRN kazancı varsayılmaz → muhafazakâr)."""
+    out = {}
+    for arm, blocks in spec.items():
+        dev = skill_sd * rng.standard_normal(A) if arm != "reference" else np.zeros(A)
+        rew, net = [], []
+        for pc, q in blocks:
+            c = rng.random((A, 10)) < np.clip(pc + dev[:, None], 0.02, 0.99)
+            good = rng.random((A, 10)) < np.clip(q + dev[:, None], 0.02, 0.99)
+            hit = rng.random((A, 10)) < np.where(good, O5_P_HI, O5_P_LO)
+            rew.append((c & hit).astype(int))
+            net.append(np.where(c, np.where(good, 1, -1), 0))
+        out[arm] = np.concatenate(rew, 1)
+        out["net_" + arm] = np.concatenate(net, 1)
+    return out
+
+
 def scenarios(game: str, thr: Thr, p0: float, pa: float, ref: float) -> list[tuple[str, dict]]:
     d, e = thr.delta, thr.delta_eq
     if game in ("O1", "O2"):
@@ -60,6 +82,18 @@ def scenarios(game: str, thr: Thr, p0: float, pa: float, ref: float) -> list[tup
                 (f"etki 1,5δ={1.5 * d:.3f}", {**base, "ens": pa + 1.5 * d}), (f"etki 2δ={2 * d}", {**base, "ens": pa + 2 * d}),
                 ("kör düzey kayması +δ_eq, ens kazancı 2δ (P3 betimsel: raporlanır, karar vermez)", {**base, "ens": pa + 2 * d, "anosmic_ens": p0 + e}),
                 ("koku etkisi yok: ens yalnız kör düzeyi yükseltiyor (P2 başarısız olmalı)", {**base, "ens": pa + d, "anosmic_ens": pa + d})]
+    if game == "O5":
+        pl, fr, rf = O5_PILOT["plastic"], O5_PILOT["frozen"][0], O5_PILOT["reference"]
+        def mix(w):    # w=0: öğrenmesiz düzey, w=1: pilot düzeyi
+            return [(fr[0] + w * (pc - fr[0]), fr[1] + w * (q - fr[1])) for pc, q in pl]
+        return [("sıfır etki (plastic = frozen)", {"plastic": [fr] * 4, "frozen": [fr] * 4, "reference": rf}),
+                ("pilot etkisinin yarısı", {"plastic": mix(0.5), "frozen": [fr] * 4, "reference": rf}),
+                ("pilot etkisi (beklenen)", {"plastic": mix(1.0), "frozen": [fr] * 4, "reference": rf}),
+                ("yalnız faz-1 öğreniyor, tersine çevirme sonrası öğrenmesiz düzey (P2 başarısız olmalı)",
+                 {"plastic": mix(1.0)[:3] + [fr], "frozen": [fr] * 4, "reference": rf}),
+                ("yalnız yaklaşma: temas artıyor, iyi/kötü ayrımı yok (P3 başarısız olmalı)",
+                 {"plastic": [(pc, fr[1]) for pc, _ in pl], "frozen": [fr] * 4, "reference": rf}),
+                ("referans kapısı: referans düşük (kapı başarısız olmalı)", {"plastic": mix(1.0), "frozen": [fr] * 4, "reference": [(0.5, 0.5)] * 4})]
     if game == "O3":
         eq = {k: p0 for k in "ABCDF"}          # A-D: plastic 2x2 hücreleri, F: frozen:A
         return [("sıfır sapma", eq), (f"D sapması = δ_eq/2 ({e / 2:.3f})", {**eq, "D": p0 + e / 2}),
@@ -91,7 +125,8 @@ def run(game: str, thr: Thr, sims: int, A: int, T: int, p0: float, pa: float, re
     for name, spec in scenarios(game, thr, p0, pa, ref):
         n_ok, per, gates = 0, {}, 0
         for _ in range(sims):
-            h = sim_slots(rng, spec, A, T, indep) if game == "O4c" else sim_hits(rng, spec, A, T, creature_sd, indep, het)
+            h = (sim_slots(rng, spec, A, T, indep) if game == "O4c" else sim_o5(rng, spec, A) if game == "O5"
+                 else sim_hits(rng, spec, A, T, creature_sd, indep, het))
             r = ev(h, thr)
             n_ok += r["passed"]
             gates += r["gates_ok"]

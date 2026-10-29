@@ -112,13 +112,16 @@ def bandit_schedule(better: torch.Tensor, n_episodes: int, switch: int | None, p
     return out
 
 
-def play_sequence(creature: Creature, schedule: list[torch.Tensor], seconds: float, learn: bool = True) -> dict:
+def play_sequence(creature: Creature, schedule: list[torch.Tensor], seconds: float, learn: bool = True, flip_swap_at: int | None = None) -> dict:
     """Aynı canlılar ardışık bölümler oynar (ağırlıklar bölümler arasında korunur). Çıktı: bölüm × eleman dizileri.
-    slot: ilk temas edilen yuva (−1 yok); got: o temasta ödül alındı mı; time: ilk temas süresi (sn, yoksa nan)."""
+    slot: ilk temas edilen yuva (−1 yok); got: o temasta ödül alındı mı; time: ilk temas süresi (sn, yoksa nan).
+    flip_swap_at: bu bölümden itibaren `world.swap` ters çevrilir (yalnız referans kolu için; ödül programını `bandit_schedule` ayrıca değiştirir)."""
     B = creature.world.B
     idx = torch.arange(B)
     rec = {"slot": [], "got": [], "time": []}
-    for p in schedule:
+    for ep, p in enumerate(schedule):
+        if flip_swap_at is not None and ep == flip_swap_at:             # referans karşılaştırıcı: iyi koku tersine dönünce takip ettiği kokuyu da değiştirir
+            creature.world.swap = ~creature.world.swap
         creature.world.reward_p = p.to(creature.world.device).clone()
         creature.reset_episode("game", test=False)
         creature.run(seconds, learn=learn, stop_when_done=True)
