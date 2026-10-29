@@ -9,7 +9,7 @@ Canlılar: iki bağımsız ön-eğitim popülasyonu (tohum 200 ve 201; 24 canlı
 |---|---|---|---|
 | **O4a** (sönüm), tohum 240/241 | **BAŞARILI** (aşağıda) | **BAŞARILI** | **BAŞARILI** (iki popülasyonda G4 + P1) |
 | O4c (decoy + kokusuz gerçek hedef), tohum 242/243 | koşuyor | koşuyor | bekleniyor |
-| O3 (yalnız temas, eşdeğerlik), tohum 230/231 | koşuyor | koşuyor | bekleniyor |
+| **O3** (yalnız temas, eşdeğerlik), tohum 230/231 | **GEÇTİ** (G3 + 10/10 E3) | **GEÇTİ** (G3 + 10/10 E3) | **EŞDEĞERLİK GEÇTİ** (olumsuz kontrol; zeka iddiası yok) |
 
 ## O4a
 
@@ -26,3 +26,18 @@ Canlılar: iki bağımsız ön-eğitim popülasyonu (tohum 200 ve 201; 24 canlı
 * Sönüm kuralı elle yazılmış hata terimine dayanıyor (`δ = kapı·(hedef·ödül − valence)`; K-026): ödülsüz tüketimde δ negatif olur ve ağırlıklar bastırılır. Yani sonuç "öğrenme kuralı sönümü üretiyor" der, "veriden gelen hata devresi sönümü üretiyor" **demez** (kapı 3.3 karşılanmadı, `docs/evre3_dan_plani.md` §5).
 * Hızlı öğrenme/unutma (tek denemede sönüm) sorusu bu oyunda ölçülmedi; 12 bölümlük sonuç sınandı. Kimlik değişimi ve transfer ertelendi (ön-kayıt §6).
 * Tek ön-eğitim hattı, iki tohum.
+
+## O3 (olumsuz kontrol: koku alanı yok, hedef yalnız temasta algılanır)
+
+| kol (p_hit) | pop. 200 (230) | pop. 201 (231) |
+|---|---|---|
+| plastic A (ödül+koku) | 0,219 | 0,254 |
+| plastic B (ödül, koku yok) | 0,225 | 0,256 |
+| plastic C (ödülsüz, koku var) | 0,247 | 0,248 |
+| plastic D (ikisi de yok) | 0,255 | 0,266 |
+| frozen A (öğrenme kapalı) | 0,243 | 0,266 |
+
+* **G3:** koşu boyunca alan görülen deneme 0 / 0 (ön-temas `glom ≡ 0`) ✔ iki popülasyonda.
+* **E3:** 10 kol çiftinin hepsinde eşli fark %98 küme-GA'sı (−0,10; +0,10) içinde ✔ iki popülasyonda. En uç GA: pop. 200'de plastic:A~plastic:D −0,036 [−0,062; −0,008] (sıfırı dışlar ama marjın içinde), frozen:A~plastic:A +0,025 [+0,003; +0,045]; pop. 201'de en uç −0,042.
+* **Dürüst cümle (ön-kayıt §1):** Koku alanı olmadan bu canlı **kör arama düzeyinde (≈0,22–0,27) kalıyor**; ödül öğrenmesi konum belleği vermiyor ve oyun dünyasında ön-temas bilgi sızıntısı yok (|Δp| < 0,10). Bu bir **başarı değil, olumsuz kontroldür**: canlının "yeri hatırlama" gibi bir yeteneği yok ve sınanan şey bunu bulmak değildi.
+* **Sınırlar:** 0,05'ten küçük farklar dışlanamaz (güç analizi); O3'te sıfır dışlayan iki küçük fark (≈0,03) raporlanmıştır, yorumlanmamıştır. Konum belleği/sistematik keşif istenirse ayrı devre kapısıdır (M1).
