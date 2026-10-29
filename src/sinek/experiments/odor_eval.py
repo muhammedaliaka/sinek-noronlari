@@ -155,22 +155,24 @@ def eval_o5(h: dict, thr: Thr, extra_gates: dict | None = None, blocks=O5_BLOCKS
 
 
 def eval_o5b(h: dict, thr: Thr, extra_gates: dict | None = None, blocks=O5_BLOCKS, delta_np: float = 0.10, delta_r: float = 0.08) -> dict:
-    """O5b (docs/odor_o5b_plani.md; E-15 dersi): karar veren ölçüt YAKLAŞMADAN ARINDIRILMIŞ seçicilik. Girdi h: plastic, plastic_ens, frozen, reference (yaşam, bölüm) ödül ve
-    net_plastic, net_plastic_ens, net_frozen (yaşam, bölüm) net tercih skoru (+1 iyi koku, −1 kötü koku, 0 temas yok).
+    """O5b (docs/odor_o5b_plani.md; E-15 dersi): karar veren ölçüt YAKLAŞMADAN ARINDIRILMIŞ seçicilik. Girdi h: plastic, frozen, reference, [plastic_ens] (yaşam, bölüm) ödül ve
+    net_plastic, net_frozen, [net_plastic_ens] (yaşam, bölüm) net tercih skoru (+1 iyi koku, −1 kötü koku, 0 temas yok).
     Net tercihin boş-model düzeyi her temas oranında ≈0'dır (iyi/kötü seçimi 0,5); bu yüzden `frozen` temas oranının popülasyondan popülasyona değişmesi ölçütü kaydırmaz (ödül oranı kaydırırdı).
     Kapı: referans geç bloklarda ödül oranı ≥ ref_min.
-    N1/N2: plastic − frozen net tercih farkı (geç faz-1 / geç faz-2) ≥ delta_np (üstünlük kuralı: p<α, %99 GA alt sınırı>0, ortalama ≥ δ).
-    E1: plastic_ens − plastic ödül oranı (iki geç blok birlikte) ≥ delta_r; E2: plastic_ens − plastic net tercih (iki geç blok birlikte) ≥ delta_np."""
+    N1: plastic − frozen net tercih farkı, iki geç blok birlikte (bölüm 11-20 ve 31-40) ≥ delta_np (üstünlük kuralı: p<α, %99 GA alt sınırı>0, ortalama ≥ δ).
+    N2 (yeniden öğrenme): aynı fark yalnız geç faz-2 bloğunda (tersine çevirmeden sonra) > 0 (p<α, %99 GA alt sınırı>0; asgari etki büyüklüğü YOK — 10 bölümlük blokta 48 yaşamın gücü δ için yetmez).
+    E1 (topluluk, yalnız plastic_ens varsa): plastic_ens − plastic ödül oranı (iki geç blok birlikte) ≥ delta_r. Betimsel (karar vermez): E2 aynı kural, net tercih, δ=delta_np."""
     (a0, a1), (b0, b1) = blocks
     cols = np.r_[a0:a1, b0:b1]
     gates = {"referans_odul>=ref_min": bool(np.asarray(h["reference"])[:, cols].mean() >= thr.ref_min), **(extra_gates or {})}
-    npl, nfr, nen = (np.asarray(h[k]) for k in ("net_plastic", "net_frozen", "net_plastic_ens"))
-    rpl, ren = np.asarray(h["plastic"]), np.asarray(h["plastic_ens"])
-    crit = {"N1_secicilik_faz1": _superior(npl[:, a0:a1], nfr[:, a0:a1], a1 - a0, thr, delta=delta_np, seed=7),
-            "N2_secicilik_faz2": _superior(npl[:, b0:b1], nfr[:, b0:b1], b1 - b0, thr, delta=delta_np, seed=8),
-            "E1_topluluk_odul": _superior(ren[:, cols], rpl[:, cols], len(cols), thr, delta=delta_r, seed=9),
-            "E2_topluluk_net_tercih": _superior(nen[:, cols], npl[:, cols], len(cols), thr, delta=delta_np, seed=10)}
-    return _result(gates, crit)
-
+    npl, nfr = np.asarray(h["net_plastic"]), np.asarray(h["net_frozen"])
+    crit = {"N1_secicilik_toplam": _superior(npl[:, cols], nfr[:, cols], len(cols), thr, delta=delta_np, seed=7),
+            "N2_yeniden_ogrenme_faz2": _superior(npl[:, b0:b1], nfr[:, b0:b1], b1 - b0, thr, delta=0.0, seed=8)}
+    desc = {}
+    if "plastic_ens" in h:            # topluluk kolu yoksa (ör. yalnız düz O5 verisi) E ölçütleri atlanır
+        nen, rpl, ren = np.asarray(h["net_plastic_ens"]), np.asarray(h["plastic"]), np.asarray(h["plastic_ens"])
+        crit["E1_topluluk_odul"] = _superior(ren[:, cols], rpl[:, cols], len(cols), thr, delta=delta_r, seed=9)
+        desc["E2_topluluk_net_tercih"] = _superior(nen[:, cols], npl[:, cols], len(cols), thr, delta=delta_np, seed=10)
+    return {**_result(gates, crit), "descriptive": desc}
 
 EVALUATORS = {"O1": eval_o1, "O2": eval_o2, "O3": eval_o3, "O4a": eval_o4a, "O4c": eval_o4c, "SC": eval_scale, "O5": eval_o5, "O5b": eval_o5b}

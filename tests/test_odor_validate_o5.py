@@ -54,3 +54,11 @@ def test_optional_plastic_ens_arm_only_in_pilot_and_chunk_parallel(cfg, tmp_path
     for bad in (["--ens-k", "2"], ["--ens-tau", "0.04"]):
         with pytest.raises(SystemExit):
             V5.main(["--pre", "yok.npz", "--seed", "260", "--out", str(tmp_path / "o"), *bad])
+
+
+def test_o5b_mode_fixes_ensemble_and_default_chunks(cfg, tmp_path):
+    for bad in (["--o5b", "--ens-k", "2"], ["--o5b", "--pilot", "--ens-tau", "0.1"]):
+        with pytest.raises(SystemExit):
+            V5.main(["--pre", "yok.npz", "--seed", "260", "--out", str(tmp_path / "o"), *bad])
+    assert V5.O5B_ENS == (4, 0.04)
+    assert V5.blocks_for(40, 20) == V5.O5_BLOCKS
