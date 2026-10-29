@@ -170,3 +170,18 @@ Okuma (dürüst):
 * V2/− (MBON→DAN geri besleme) hızı değiştirmeden **plato yükseltiyor** (0,39 → 0,58 → 0,72) ama sönümü yavaşlatıyor ve küçük bir sahte öğretmen (≈0,04–0,05) getiriyor — §5 bulgusuyla tutarlı.
 * Ölçek ≥3'te aşırı genelleme/kararsızlık görülmedi (V0 sahte öğretmen 0); sınır daha büyük ölçeklerde aranabilir.
 * **Sonraki adım (tasarım):** hız farkını görünür kılan görev = **olasılıklı ödül + oturum içi tersine çevirme** (iki-kollu kuşatma/bandit: A %80, B %20 ödül; 20 denemede tersine çevirme). Metrikler: kümülatif pişmanlık, tersine çevirme sonrası adaptasyon denemesi. Bu yeni bir oyun (O5) olur: ön-kayıt + güç benzetimi gerektirir; plastik kollar oyun içinde öğrenir.
+
+## 8. İki zaman ölçekli plastisite: soyut kuram kontrolü (R-8; 2026-10-29; KANIT DEĞİL, beyin değil)
+
+Hipotez (§7 sonu, O5 pilotundan): "hızlı + yavaş plastisite birlikte olursa hız–gürültü ödünleşimi hafifler." Beyne kod yazmadan önce soyut bir ödül öğrenicide sınandı (`kuram_iki_zaman.py`, `results/kuram_iki_zaman.md`; O5 programı, 40 000 yaşam/öğrenici, Q ← Q + α(r − Q), softmax T=0,15). Tahmin koşudan önce dosya başlığına yazıldı.
+
+| öğrenici (üçü ortalama = geç faz-1, geçiş, geç faz-2) | ödül/bölüm |
+|---|---|
+| tek EMA α = 0,05 / 0,1 / 0,2 / 0,3 / **0,5** / 0,8 / 1,0 | 0,519 / 0,570 / 0,635 / 0,664 / **0,682** / 0,678 / 0,655 |
+| en iyi sabit karışım (hızlı 0,8, yavaş 0,15, w_hızlı 0,7) | 0,669 (−0,013) |
+| en iyi sürprizle kapılı α (0,15 → 0,8) | 0,675 (−0,008) |
+
+Tahminler: (1) tek EMA'da orta α'da tepe — **tuttu** (α = 0,5). (2) karışım en iyi tek α'dan farksız (|fark| < 0,01) — **yönü tuttu, büyüklüğü hafif aştı**: karışım en iyi tek α'nın 0,013 **altında** (iki üstel çekirdek tek üstelden iyi değil, orta ağırlıkta daha kötü). (3) kapılı α için +0,01…+0,03 kazanç — **YANLIŞ çıktı**: basit sürpriz kapısı kazanç vermedi (−0,008). Bu "hiçbir kapı olmaz" demek değil; yalnız denenen basit kapı kazandırmadı (Bernoulli 0,8/0,2 geri bildirimi değişimi bölüm başına zayıf işaretlediği için tespit gecikmesi baskın).
+
+**Sonuç (yön, kanıt değil):** (a) tek EMA eğrisi α = 0,3–0,8 arasında neredeyse düz (0,664–0,682): zaman ölçeği mühendisliğinden beklenen üst kazanç **≈0,02 ödül/bölüm** — O5 ön-kaydının δ = 0,10'unun çok altında ve O5'teki asıl boşluğun (öğrenmiş beyin ≈0,36 vs soyut tavan ≈0,6–0,75) küçük bir parçası. (b) İki zaman ölçekli plastisite bu yüzden **düşük öncelik**; "ödünleşimi hafifletir" hipotezi soyut modelde desteklenmedi. (c) Asıl kaldıraç tahmini: yaklaşma (temas-yok %25–45) ve değer okuma gürültüsü (K-028); ölçek ekseni (K=8, τ=0,04) O5'te plastik kol için sınanmalıdır — ama `EnsembleBrain` kopyaları öğrenme kapalı okuma içindir; plastik kolda topluluk okuması için yeni tasarım gerekir (§GPU devri 3b).
+Sınır: soyut modelde okuma gürültüsü ve yaklaşma yok; gerçek beyinde ödünleşim eğrisi farklı olabilir.
