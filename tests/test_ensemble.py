@@ -69,3 +69,38 @@ def test_tau_override_is_local_and_none_is_noop():
     for _ in range(steps):
         va, vb = ens.step(g, z, z), same.step(g, z, z)
     assert not torch.equal(va, vb)                               # kısa τ değeri farklı kılar (sıfır-etki değil: bilinen etki)
+
+
+def test_plastic_k1_identical_to_unwrapped_while_learning():
+    from sinek.ensemble import PlasticEnsembleBrain
+    cfg = ConnectomeBrainConfig()
+    base = ConnectomeBrain(cfg, 3, 9)
+    ens = PlasticEnsembleBrain(ConnectomeBrain(cfg, 3, 9), 1)
+    g, z, steps = _inputs(3, base.n_glom)
+    taste, touch = torch.ones(3), torch.ones(3)                               # tatlı ödül + temas kapısı
+    base.gen.manual_seed(5); ens.gen.manual_seed(5)
+    for _ in range(steps):
+        v0 = base.step(g, taste, touch, learn=True)
+        v1 = ens.step(g, taste, touch, learn=True)
+        assert torch.equal(v0, v1)
+    assert torch.equal(base.W, ens.inner.W) and not torch.equal(base.W, ConnectomeBrain(cfg, 3, 9).W)   # öğrendi (W değişti) ve birebir aynı
+
+
+def test_plastic_k_copies_learn_independently_and_scale_passes_through():
+    from sinek.ensemble import PlasticEnsembleBrain
+    cfg = ConnectomeBrainConfig()
+    b = ConnectomeBrain(cfg, 2, 9)
+    w0 = b.W.clone()
+    ens = PlasticEnsembleBrain(b, 3)
+    ens.eta_scale = torch.tensor([1.0, 0.0])                                  # canlı 0 öğrenir, canlı 1 öğrenmez
+    assert ens.eta_scale.tolist() == [1.0, 0.0] and ens.inner.eta_scale.tolist() == [1.0] * 3 + [0.0] * 3
+    g, z, steps = _inputs(2, b.n_glom)
+    taste, touch = torch.ones(2), torch.ones(2)
+    ens.gen.manual_seed(2)
+    for _ in range(steps):
+        v = ens.step(g, taste, touch, learn=True)
+    assert v.shape == (2, 2) and torch.isfinite(v).all()
+    iw = ens.inner.W.view(2, 3, 2, b.n_kc, b.n_mbon)                           # (canlı, kopya, yarımküre, KC, MBON)
+    assert not torch.equal(iw[0, 0], iw[0, 1])                                 # öğrenen kopyalar bağımsız gürültüyle ayrıştı
+    assert torch.equal(iw[1, 0], w0.view(2, 2, b.n_kc, b.n_mbon)[1]) and torch.equal(iw[1, 2], iw[1, 0])   # eta_scale=0: hiç değişmedi
+    assert torch.equal(b.W, w0)                                                # kaynak beyin bozulmadı

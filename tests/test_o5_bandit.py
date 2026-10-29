@@ -37,3 +37,10 @@ def test_o5_only_changes_bandit_games(cfg):
     """Mevcut oyunların dünyası O5 ekleriyle değişmedi: reward_u çekimi ayrı akıştan, bandit=False oyunlarda ödül çarpanı yok."""
     from sinek.games.spec import GAMES
     assert not any(g.bandit for k, g in GAMES.items() if k != "O5") and GAMES["O5"].bandit
+
+
+def test_o5_dev_arm_parsing():
+    from sinek.experiments.o5_dev import parse_arm
+    assert parse_arm("naive_plastic@1") == ("naive_plastic", 1.0, 1, None)
+    assert parse_arm("naive_plastic@0.3/k4/t0.04") == ("naive_plastic", 0.3, 4, 0.04)
+    assert parse_arm("naive") == ("naive", None, 1, None)

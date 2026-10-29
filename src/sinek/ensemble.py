@@ -44,3 +44,31 @@ class EnsembleBrain:
         k = self.k
         v = self.inner.step(glom.repeat_interleave(k, 0), taste.repeat_interleave(k, 0), touch.repeat_interleave(k, 0), learn=False)
         return v.view(self.B, k, -1).mean(1)
+
+
+class PlasticEnsembleBrain(EnsembleBrain):
+    """Öğrenen topluluk (geliştirme; GPU devri 3b): K kopya BAĞIMSIZ öğrenir (her kopyanın kendi W'si ve kendi δ'sı), karar için değerler ortalanır.
+
+    `EnsembleBrain`ın aksine öğrenme kapalı değildir: `eta_scale` kopyalara taşınır, `learn` iç beyne iletilir. Kopyalar yalnız Poisson gürültüsü ve ondan doğan
+    δ/iz farkları kadar ayrışır; ortalama hem okuma gürültüsünü hem öğrenme gürültüsünü azaltmayı amaçlar. Maliyet ≈K× hesap ve bellek.
+    K=1 sarmalayıcısı sarılmamış beyinle öğrenme AÇIKKEN de birebir aynıdır (testli).
+    """
+
+    def __init__(self, brain, k: int, tau_valence: float | None = None):
+        super().__init__(brain, k, tau_valence)
+        self.inner.eta_scale = brain.eta_scale.repeat_interleave(k).clone()
+
+    @property
+    def eta_scale(self):
+        return self.inner.eta_scale[:: self.k]
+
+    @eta_scale.setter
+    def eta_scale(self, v) -> None:
+        v = torch.as_tensor(v, dtype=self.inner.eta_scale.dtype, device=self.inner.eta_scale.device)
+        self.inner.eta_scale = v.repeat_interleave(self.k).clone()
+
+    @torch.no_grad()
+    def step(self, glom, taste, touch, learn: bool = False):
+        k = self.k
+        v = self.inner.step(glom.repeat_interleave(k, 0), taste.repeat_interleave(k, 0), touch.repeat_interleave(k, 0), learn=learn)
+        return v.view(self.B, k, -1).mean(1)
