@@ -49,3 +49,28 @@ def test_scale_validator_resumes_chunked_zero_effect_and_guards(cfg, tmp_path):
     for bad in (["--seed", "150"], ["--seed", "250", "--pilot"]):
         with pytest.raises(SystemExit):
             VSC.main(["--pre", "yok.npz", "--game", "O1a", "--out", str(tmp_path / "o"), *bad])
+
+
+def test_olcek_ozet_verdict_rules_and_table(tmp_path):
+    from sinek.experiments import olcek_ozet as OZ
+    rng = np.random.default_rng(0)
+    thr = Thr(n_boot=500, n_perm=500)
+
+    def fake(gain):
+        h = _h(rng, 24, 16, {"reference": 0.97, "anosmic": 0.27, "frozen": 0.5, "anosmic_ens": 0.27, "ens": 0.5 + gain})
+        ev = EVALUATORS["SC"](h, thr, {"sizinti_ihlali==0": True, "anosmik_pencerede": True})
+        return {"eval": ev, "leak": {"violations": 0, "checked": 5}, "p_hit": {k: float(np.mean(v)) for k, v in h.items()}}
+
+    ok, bad = fake(0.3), fake(0.0)
+    assert ok["eval"]["passed"] and not bad["eval"]["passed"]
+    allok = {(g, s): ok for g, ss in OZ.GAMES.items() for s in ss}
+    assert OZ.verdict(allok)["ölçek"] == "BAŞARILI"
+    one_bad = {**allok, ("O1b", 253): bad}
+    v = OZ.verdict(one_bad)
+    assert v["O1a"] == "BAŞARILI" and v["O1b"] == "BAŞARISIZ" and v["ölçek"] == "BAŞARISIZ"
+    missing = {**allok, ("O1b", 253): None}
+    v = OZ.verdict(missing)
+    assert v["O1b"] == "BEKLİYOR" and v["ölçek"] == "BEKLİYOR"
+    missing_and_bad = {**one_bad, ("O1a", 251): None}
+    assert OZ.verdict(missing_and_bad)["ölçek"] == "BAŞARISIZ"                  # bir başarısızlık varken eksik koşu hükmü değiştiremez
+    assert "BEKLİYOR" in OZ.table(missing) and "P1 ens−frozen" in OZ.table(allok)
