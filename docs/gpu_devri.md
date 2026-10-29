@@ -10,7 +10,7 @@ Dil: Türkçe, dürüst raporlama (başarısızlıklar da yazılır). Sinek beyn
 | Dört koku oyunu O1a/O1b/O2-yakın | **BAŞARILI** (iki popülasyon); mutlak başarı düşük (frozen ≈0,47–0,72; referans 0,83–0,98) | `docs/odor_o1_o2_sonuclari.md` |
 | O3 (yalnız temas), O4a/O4c (yanıltıcı koku, sönüm) | **bitti:** O4a BAŞARILI, O4c BAŞARILI, O3 eşdeğerlik GEÇTİ (negatif kontrol; yer belleği yok). Sönüm elle yazılmış δ terimine dayanır | `docs/odor_o3_o4_sonuclari.md` |
 | Başarıyı sınırlayan şey | **değer okumasının Poisson gürültüsü** (K→∞ gürültüsüz tablo 0,818 vs 0,510; K=4 yalnız 0,552) — K-028 | `docs/evre3_dan_plani.md` §6 |
-| Ölçek ekseni doğrulayıcısı (K=8 + τ=0,04, O1a/O1b, tohum 250–253) | ön-kayıt commit edildi (K-036); koşular `scripts/run_scale_validators.sh` ile sürüyor/sürdü — sonuç için `docs/olcek_sonuclari.md` varsa oraya, yoksa `results/scale_val/*/summary.md` ve karar defterine bak | `docs/olcek_plani.md` |
+| Ölçek ekseni doğrulayıcısı (K=8 + τ=0,04, O1a/O1b, tohum 250–253) | **bitti: 4/4 BAŞARILI** (frozen 0,45–0,52 → ens 0,70–0,82; referans 0,95–0,99; ağırlıklar aynı, maliyet ≈K×) — K-038 | `docs/olcek_sonuclari.md` |
 | DAN devresi veriden | kapı 3.3 **karşılanmadı**: V1 etkisiz, V2/V3 ya kararsız (g ≥ 0,5) ya sönümü bozuyor (düşük g) | `docs/evre3_dan_plani.md` §5, `docs/dan_girdi_analizi.md` |
 | Dış kaynaklar | BANC rakamları kısmen, lisanslar tablo halinde (FlyWire **CC BY-NC**) | `docs/dis_kaynak_dogrulamalari.md` |
 
