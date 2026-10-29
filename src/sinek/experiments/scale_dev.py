@@ -8,6 +8,7 @@ Sonuçlar tasarım ipucudur; doğrulayıcı tohumları (≥200) kullanılmaz (R-
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import time
 from pathlib import Path
 
@@ -61,8 +62,17 @@ def build_table(pre, c_ref, agents, trials, n_grid=21, steps=120, burn=40):
     return tab, grid
 
 
-def _hits(pre, game, arm, agents, trials, seed, seconds, k=0):
+def set_motor(c, eps=None, gain=None):
+    """Test anı motor kuralı geçersiz kılma (yalnız geliştirme): contrast_eps ve/veya turn_gain."""
+    if eps is not None:
+        c.cfg = dataclasses.replace(c.cfg, motor=dataclasses.replace(c.cfg.motor, contrast_eps=eps))
+    if gain is not None:
+        c.turn_gain = torch.full((c.world.B,), float(gain))
+
+
+def _hits(pre, game, arm, agents, trials, seed, seconds, k=0, eps=None, gain=None):
     c = make_game_creature(pre, game, arm, agents, trials, seed)
+    set_motor(c, eps, gain)
     if k:
         c.brain = EnsembleBrain(c.brain, k)
     out = play(c, seconds, learn=False, test=True)
@@ -77,6 +87,8 @@ def main(argv=None) -> None:
     ap.add_argument("--ks", default="1,2,4")
     ap.add_argument("--oracle", action="store_true", help="K→∞ üst sınırı: gürültüsüz değer tablosu ile frozen kol")
     ap.add_argument("--tau", type=float, default=None, help="tau_valence geçersiz kıl (okuma entegrasyon süresi, sn); yalnız geliştirme")
+    ap.add_argument("--eps", type=float, default=None, help="contrast_eps geçersiz kıl (test anı motor; yalnız geliştirme)")
+    ap.add_argument("--turn-gain", type=float, default=None, help="turn_gain geçersiz kıl (test anı motor; yalnız geliştirme)")
     ap.add_argument("--agents", type=int, default=24)
     ap.add_argument("--trials", type=int, default=8)
     ap.add_argument("--seconds", type=float, default=25.0)
@@ -91,13 +103,15 @@ def main(argv=None) -> None:
         pre.brain.cfg.tau_valence = a.tau
     agents = list(range(min(a.agents, pre.world.B)))
     t0 = time.time()
-    h_an, _ = _hits(pre, a.game, "anosmic", agents, a.trials, a.seed, a.seconds)
-    h_ref, _ = _hits(pre, a.game, "reference", agents, a.trials, a.seed, a.seconds)
-    h_fr, o_fr = _hits(pre, a.game, "frozen", agents, a.trials, a.seed, a.seconds)
+    mo = dict(eps=a.eps, gain=a.turn_gain)
+    h_an, _ = _hits(pre, a.game, "anosmic", agents, a.trials, a.seed, a.seconds, **mo)
+    h_ref, _ = _hits(pre, a.game, "reference", agents, a.trials, a.seed, a.seconds, **mo)
+    h_fr, o_fr = _hits(pre, a.game, "frozen", agents, a.trials, a.seed, a.seconds, **mo)
     print(f"[{time.time() - t0:5.0f}s] anosmik {h_an.mean():.3f} referans {h_ref.mean():.3f} frozen(sarmasız) {h_fr.mean():.3f}", flush=True)
     rows = []
     if a.oracle:
         c = make_game_creature(pre, a.game, "reference", agents, a.trials, a.seed)
+        set_motor(c, a.eps, a.turn_gain)
         tab, grid = build_table(pre, c, agents, a.trials)
         c.brain = LookupBrain(c.world, tab, grid, a.trials)
         o = play(c, a.seconds, learn=False, test=True)
@@ -106,7 +120,7 @@ def main(argv=None) -> None:
         rows.append(f"| ∞ (gürültüsüz tablo) | {h.mean():.3f} | {m:+.3f} [{lo:+.3f}, {hi:+.3f}] | {np.mean(h_ref) - h.mean():+.3f} |")
         print(f"[{time.time() - t0:5.0f}s] K=∞: {rows[-1]}", flush=True)
     for k in [int(x) for x in a.ks.split(",") if x]:
-        h, o = _hits(pre, a.game, "frozen", agents, a.trials, a.seed, a.seconds, k=k)
+        h, o = _hits(pre, a.game, "frozen", agents, a.trials, a.seed, a.seconds, k=k, **mo)
         if k == 1:
             same = bool(np.array_equal(h, h_fr) and np.array_equal(o["slot"], o_fr["slot"]))
             print(f"K=1 sarmalayıcı sarılmamış kolla birebir aynı: {same}", flush=True)
@@ -116,7 +130,7 @@ def main(argv=None) -> None:
         rows.append(f"| {k} | {h.mean():.3f} | {m:+.3f} [{lo:+.3f}, {hi:+.3f}] | {np.mean(h_ref) - h.mean():+.3f} |")
         print(f"[{time.time() - t0:5.0f}s] K={k}: {rows[-1]}", flush=True)
     text = "\n".join([f"# Ölçek eğrisi (geliştirme; kanıt değildir): {a.game}, oyun tohumu {a.seed}", "",
-                      f"{len(agents)} canlı × {a.trials} deneme; tau_valence={pre.brain.cfg.tau_valence}; anosmik {h_an.mean():.3f}, referans {h_ref.mean():.3f}.", "",
+                      f"{len(agents)} canlı × {a.trials} deneme; tau_valence={pre.brain.cfg.tau_valence}; motor ε={a.eps if a.eps is not None else pre.cfg.motor.contrast_eps:g}, turn_gain={a.turn_gain if a.turn_gain is not None else pre.cfg.motor.turn_gain:g}; anosmik {h_an.mean():.3f}, referans {h_ref.mean():.3f}.", "",
                       "| K (anten başına kopya) | frozen p_hit | frozen − anosmik [%99 GA] | referansa uzaklık |", "|---|---|---|---|"] + rows) + "\n"
     print(text)
     if a.out:
