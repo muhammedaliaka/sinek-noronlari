@@ -7,15 +7,20 @@ K=1 sarmalayıcısı sarılmamış beyinle birebir aynıdır (testli). Öğrenme
 """
 from __future__ import annotations
 
+import dataclasses
+
 import torch
 
 
 class EnsembleBrain:
-    def __init__(self, brain, k: int):
+    def __init__(self, brain, k: int, tau_valence: float | None = None):
+        """`tau_valence`: yalnız bu topluluğun okuma entegrasyon süresi (sn); None: beyinin kendi değeri. Sarılan beynin yapılandırması değişmez."""
         if k < 1:
             raise ValueError("k >= 1 olmalı")
         self.k, self.B = k, brain.B
         self.inner = brain.select(torch.arange(brain.B).repeat_interleave(k))      # eleman-major: indeks = b*k + j
+        if tau_valence is not None:
+            self.inner.cfg = dataclasses.replace(self.inner.cfg, tau_valence=float(tau_valence))
         self.inner.eta_scale = torch.zeros_like(self.inner.eta_scale)
         self.seed = brain.seed
 

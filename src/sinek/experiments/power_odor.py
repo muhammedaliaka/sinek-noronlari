@@ -54,6 +54,12 @@ def scenarios(game: str, thr: Thr, p0: float, pa: float, ref: float) -> list[tup
         base = {"anosmic": p0, "random": p0, "reference": ref}
         return [("sıfır etki", {**base, "frozen": p0}), (f"etki δ={d}", {**base, "frozen": p0 + d}),
                 (f"etki 1,5δ={1.5 * d:.3f}", {**base, "frozen": p0 + 1.5 * d}), (f"etki 2δ={2 * d}", {**base, "frozen": p0 + 2 * d})]
+    if game == "SC":                              # ölçek ekseni: pa = taban frozen düzeyi, p0 = kör düzey
+        base = {"frozen": pa, "anosmic": p0, "anosmic_ens": p0, "reference": ref}
+        return [("sıfır etki (ens=frozen)", {**base, "ens": pa}), (f"etki δ={d}", {**base, "ens": pa + d}),
+                (f"etki 1,5δ={1.5 * d:.3f}", {**base, "ens": pa + 1.5 * d}), (f"etki 2δ={2 * d}", {**base, "ens": pa + 2 * d}),
+                ("kör düzey kayması +δ_eq, ens kazancı 2δ (P3 betimsel: raporlanır, karar vermez)", {**base, "ens": pa + 2 * d, "anosmic_ens": p0 + e}),
+                ("koku etkisi yok: ens yalnız kör düzeyi yükseltiyor (P2 başarısız olmalı)", {**base, "ens": pa + d, "anosmic_ens": pa + d})]
     if game == "O3":
         eq = {k: p0 for k in "ABCDF"}          # A-D: plastic 2x2 hücreleri, F: frozen:A
         return [("sıfır sapma", eq), (f"D sapması = δ_eq/2 ({e / 2:.3f})", {**eq, "D": p0 + e / 2}),
@@ -91,6 +97,8 @@ def run(game: str, thr: Thr, sims: int, A: int, T: int, p0: float, pa: float, re
             gates += r["gates_ok"]
             for k, c in r["criteria"].items():
                 per[k] = per.get(k, 0) + int(c["passed"])
+            for k, c in r.get("descriptive", {}).items():
+                per[k + " (betimsel)"] = per.get(k + " (betimsel)", 0) + int(c["passed"])
         rows.append({"senaryo": name, "geçti": n_ok / sims, "kapılar": gates / sims, "ölçüt": {k: v / sims for k, v in per.items()}})
     return rows
 

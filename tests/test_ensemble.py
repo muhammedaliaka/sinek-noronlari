@@ -53,3 +53,19 @@ def test_ensemble_does_not_modify_source_weights():
     assert torch.equal(b.W, w)
     iw = ens.inner.W.view(4, 2, b.n_kc, b.n_mbon)
     assert torch.equal(iw[1], w.view(2, 2, b.n_kc, b.n_mbon)[0]) and torch.equal(iw[2], w.view(2, 2, b.n_kc, b.n_mbon)[1])
+
+
+def test_tau_override_is_local_and_none_is_noop():
+    cfg = ConnectomeBrainConfig()
+    b = ConnectomeBrain(cfg, 2, 9)
+    ens = EnsembleBrain(b, 2, tau_valence=0.04)
+    assert ens.inner.cfg.tau_valence == 0.04
+    assert b.cfg.tau_valence == cfg.tau_valence == 0.15          # sarılan beynin yapılandırması değişmez
+    same = EnsembleBrain(ConnectomeBrain(cfg, 2, 9), 2, tau_valence=None)
+    assert same.inner.cfg.tau_valence == 0.15
+    g, z, steps = _inputs(2, b.n_glom)
+    ens.gen.manual_seed(3); same.gen.manual_seed(3)
+    va = vb = None
+    for _ in range(steps):
+        va, vb = ens.step(g, z, z), same.step(g, z, z)
+    assert not torch.equal(va, vb)                               # kısa τ değeri farklı kılar (sıfır-etki değil: bilinen etki)

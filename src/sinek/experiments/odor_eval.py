@@ -116,4 +116,19 @@ def eval_o4c(slots: dict, thr: Thr, extra_gates: dict | None = None) -> dict:
     return r
 
 
-EVALUATORS = {"O1": eval_o1, "O2": eval_o2, "O3": eval_o3, "O4a": eval_o4a, "O4c": eval_o4c}
+def eval_scale(h: dict, thr: Thr, extra_gates: dict | None = None) -> dict:
+    """Ölçek ekseni doğrulayıcısı (topluluk K + kısa okuma süresi; docs/olcek_plani.md). Kollar: frozen (taban beyin), ens (topluluk beyni),
+    anosmic (taban), anosmic_ens, reference. KARAR VEREN: P1 ens − frozen ≥ δ (ölçek kazancı); P2 ens − anosmic_ens ≥ δ (koku kaynaklı kazanç,
+    eşleşmiş kör kol). BETİMSEL (karar vermez): P3 anosmic_ens ~ anosmic eşdeğerliği (±δ_eq) — güç benzetimi, eşdeğerlik testinin tek başına
+    gerçek eşitlikte bile ≈%80 geçtiğini gösterdi (toplam gücü yarıya indirirdi); koruma P2'dir. P3 raporda yer alır."""
+    T = np.asarray(h["frozen"]).shape[1]
+    gates = {"referans_p_hit>=ref_min": bool(np.mean(h["reference"]) >= thr.ref_min), **(extra_gates or {})}
+    crit = {"P1_ens-frozen": _superior(h["ens"], h["frozen"], T, thr, seed=4),
+            "P2_ens-anosmic_ens": _superior(h["ens"], h["anosmic_ens"], T, thr, seed=5)}
+    m, lo, hi, ok = paired_equivalent(_sums(h["anosmic_ens"]), _sums(h["anosmic"]), T, thr.delta_eq, alpha=thr.alpha, n=thr.n_boot, seed=6)
+    r = _result(gates, crit)
+    r["descriptive"] = {"P3_anosmic_ens~anosmic": {"mean": m, "ci": [lo, hi], "passed": ok}}
+    return r
+
+
+EVALUATORS = {"O1": eval_o1, "O2": eval_o2, "O3": eval_o3, "O4a": eval_o4a, "O4c": eval_o4c, "SC": eval_scale}
