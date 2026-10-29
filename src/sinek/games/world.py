@@ -34,6 +34,8 @@ class GameWorld(World):
         self._seed, self.episode = seed, 0
         self.layout_gen = torch.Generator(device=self.device)
         self.noise_gen = torch.Generator(device=self.device)
+        self.reward_gen = torch.Generator(device=self.device)           # O5: temasta ödül çekimleri (bölüm başında önceden, CRN)
+        self.reward_p = torch.ones(batch, 2, device=self.device)         # (B,2) yuva başına ödül olasılığı (yalnız bandit oyunlarında kullanılır)
         z = torch.zeros(1, cfg.n_glom, device=self.device)
         self.pattern_ext = torch.cat([self.patterns, z])             # son satır: kokusuz (−1 dizini)
         self.anosmic = torch.zeros(batch, dtype=torch.bool, device=self.device)
@@ -67,7 +69,9 @@ class GameWorld(World):
         B, dev, sp = self.B, self.device, self.spec
         self.layout_gen.manual_seed(self._seed + 101 + 7919 * self.episode)
         self.noise_gen.manual_seed(self._seed + 202 + 7919 * self.episode)
+        self.reward_gen.manual_seed(self._seed + 303 + 7919 * self.episode)
         self.episode += 1
+        self.reward_u = torch.rand(B, 2, generator=self.reward_gen, device=dev)
         lay = make_layout(sp, self.cfg, B, self.layout_gen, dev)
         self._alloc(n_src=2)
         self.pos = lay["start"].clone()
@@ -80,6 +84,8 @@ class GameWorld(World):
         for k, s in enumerate(sp.slots()):
             if s.active and s.odor == "rewarded":
                 odor[:, k] = rewarded
+            elif s.active and s.odor in ("A", "B"):
+                odor[:, k] = 0 if s.odor == "A" else 1
         self.src_odor = odor                                           # (B,2) −1 = kokusuz
         self.src_reward = torch.tensor([[s.reward for s in sp.slots()]], device=dev).expand(B, -1).clone()
         self.armed = torch.ones(B, 2, dtype=torch.bool, device=dev)
@@ -152,6 +158,8 @@ class GameWorld(World):
             self.done[rows] = True                                      # test: ilk temas seçimdir, tüketim yok
             return
         reward = self.src_reward[rows, slot] * torch.where(slot == 0, self.arm_reward[rows].float(), torch.ones_like(slot, dtype=torch.float))
+        if self.spec.bandit:                                            # ödül bu bölümde önceden çekilmiş u'ya bağlı: reward = [u < p]
+            reward = reward * (self.reward_u[rows, slot] < self.reward_p[rows, slot]).float()
         self.feed_timer[rows] = c.feed_time
         self.feed_reward[rows] = reward
         lvl = torch.tensor([s.contact_level for s in self.spec.slots()], device=self.device)[slot]
@@ -160,7 +168,7 @@ class GameWorld(World):
         self.contact_level_b[rows] = torch.where(on, lvl, torch.zeros_like(lvl))
         pat = self.pattern_ext[torch.where(odor < 0, torch.full_like(odor, self.pattern_ext.shape[0] - 1), odor)]
         self.contact_pat[rows] = pat
-        self.finish_pending[rows] |= slot == 0                          # gerçek hedef tüketilince deneme biter
+        self.finish_pending[rows] |= (slot >= 0) if self.spec.bandit else (slot == 0)   # gerçek hedef (bandit: herhangi bir kaynak) tüketilince deneme biter
 
     # ----------------------------------------------------------------- çıktılar
     def outcome(self) -> dict[str, torch.Tensor]:

@@ -9,7 +9,7 @@ class SlotSpec:
     """Bir kaynak yuvası. Yuva 0 = gerçek hedef, yuva 1 = decoy (sahte hedef)."""
     active: bool = True
     profile: str = "none"        # none | gauss | bump | trail
-    odor: str = "rewarded"       # rewarded (canlının ödüllü kokusu) | none (kokusuz)
+    odor: str = "rewarded"       # rewarded (canlının ödüllü kokusu) | A | B (sabit koku dizini 0/1; O5) | none (kokusuz)
     reward: float = 1.0          # temasta ödül
     amp: float = 1.0
     sigma: float = 8.0           # gauss
@@ -30,6 +30,7 @@ class GameSpec:
     dmin: float = 14.0           # başlangıç–kaynak ve kaynak–kaynak en küçük uzaklık
     start_margin: float = 3.0
     src_margin: float = 6.0
+    bandit: bool = False         # O5: temasta olasılıklı ödül (dünyadaki reward_p), herhangi bir kaynağın tüketimi bölümü bitirir
 
     def slots(self):
         return (self.target, self.decoy)
@@ -55,4 +56,7 @@ GAMES: dict[str, GameSpec] = {
     "O4a": GameSpec("O4a", decoy=replace(_DECOY, active=True)),
     # O4c: decoy + kokusuz gerçek hedef
     "O4c": GameSpec("O4c", target=SlotSpec(profile="none", odor="none"), decoy=replace(_DECOY, active=True)),
+    # O5 (geliştirme): iki kaynak, kokular A (yuva 0) ve B (yuva 1); ödül olasılıkları bölümden bölüme `GameWorld.reward_p` ile değişir
+    "O5": GameSpec("O5", target=SlotSpec(profile="gauss", odor="A", sigma=8.0), decoy=SlotSpec(active=True, profile="gauss", odor="B", sigma=8.0, reward=1.0),
+                   bandit=True),
 }

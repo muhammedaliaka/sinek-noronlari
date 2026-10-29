@@ -100,6 +100,38 @@ def play(creature: Creature, seconds: float, learn: bool = False, test: bool = T
     return out
 
 
+def bandit_schedule(better: torch.Tensor, n_episodes: int, switch: int | None, p_hi: float = 0.8, p_lo: float = 0.2) -> list[torch.Tensor]:
+    """O5 ödül olasılıkları: bölüm başına (B,2) tensör (yuva 0 = koku A, yuva 1 = koku B). `better` (B,) fazın ilk yarısında iyi olan koku dizini;
+    `switch`: bu bölümden itibaren iyi koku tersine çevrilir (None = hiç)."""
+    better = better.long()
+    out = []
+    for ep in range(n_episodes):
+        b = better if (switch is None or ep < switch) else 1 - better
+        hi = torch.arange(2).view(1, 2) == b.view(-1, 1)
+        out.append(torch.where(hi, torch.full(hi.shape, p_hi), torch.full(hi.shape, p_lo)))
+    return out
+
+
+def play_sequence(creature: Creature, schedule: list[torch.Tensor], seconds: float, learn: bool = True) -> dict:
+    """Aynı canlılar ardışık bölümler oynar (ağırlıklar bölümler arasında korunur). Çıktı: bölüm × eleman dizileri.
+    slot: ilk temas edilen yuva (−1 yok); got: o temasta ödül alındı mı; time: ilk temas süresi (sn, yoksa nan)."""
+    B = creature.world.B
+    idx = torch.arange(B)
+    rec = {"slot": [], "got": [], "time": []}
+    for p in schedule:
+        creature.world.reward_p = p.to(creature.world.device).clone()
+        creature.reset_episode("game", test=False)
+        creature.run(seconds, learn=learn, stop_when_done=True)
+        o = creature.world.outcome()
+        slot = o["slot"].cpu()
+        ok = slot >= 0
+        got = torch.zeros(B)
+        u = creature.world.reward_u.cpu()
+        got[ok] = (u[idx[ok], slot[ok]] < p.cpu()[idx[ok], slot[ok]]).float()
+        rec["slot"].append(slot.numpy()); rec["got"].append(got.numpy()); rec["time"].append(o["time"].cpu().numpy())
+    return {k: np.stack(v) for k, v in rec.items()}
+
+
 def leak_check(odor_arm: dict, anosmic_arm: dict) -> dict:
     """Koku hiç alınmayan denemelerde iki kolun sonucu bit-bit aynı olmalı. Dönen: ihlal sayısı ve denetlenen deneme sayısı."""
     none = (odor_arm["first_odor_step"] < 0) & (anosmic_arm["first_odor_step"] < 0)
