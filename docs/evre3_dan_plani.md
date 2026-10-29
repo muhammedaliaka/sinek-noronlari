@@ -52,3 +52,22 @@ Gürültüsüz öğrenilmiş değer okuması (K→∞ tablo) O1a'da frozen kolu 
 * Öncelik sırası: (1) ölçek/gürültü ekseni (K=8,16, τ_valence, paylaşılan-ağırlık topluluk okuması; GPU aşamasının ana işi), (2) DAN devresi (sönüm yolu) ikinci sırada.
 * GPU aşaması için not: `EnsembleBrain` kopyaları ağırlık paylaşımlı kuruluyor ve öğrenme kapalı. Öğrenen (plastik) topluluk için kopyalar arasında ağırlık paylaşımı gerekir (tek W, K gürültü örneği): ayrı bir tasarım ve test (sıfır-etki: K=1 birebir aynı) gerekir.
 * `scale_dev` sonuçları geliştirme tohumundadır (110); doğrulayıcı tohumlarıyla (≥200) çalıştırılamaz (R-2).
+
+### 6.1 Ölçek eğrisi ve okuma süresi taraması (geliştirme, O1a, ön-eğitim 100, 24 canlı × 8 deneme, KANIT DEĞİL)
+Her nokta tek örneklemdir (192 deneme; kümeli standart hata ≈0,04–0,05): ±0,05 altındaki farklar gürültüden ayırt edilemez.
+
+| K (anten başına gürültülü kopya, τ=0,15) | 1 | 2 | 4 | 8 | 16 | ∞ (gürültüsüz tablo) | referans |
+|---|---|---|---|---|---|---|---|
+| frozen p_hit (oyun tohumu 110) | 0,510 | 0,510 | 0,552 | 0,625 | 0,646 | 0,818 | 0,984 |
+| frozen − anosmik [%99 GA] | +0,224 | +0,224 | +0,266 | +0,339 | +0,359 | +0,531 | |
+
+* K ile tek yönlü ama **yavaş** yükselme: K=16'da 0,646; K→∞ tablosuna (0,818) hâlâ 0,17 var. Basit "√K ile gürültü azalır" beklentisi karşılanmıyor. Olası nedenler (SINANMADI): kopyalar aynı dünya girdisini paylaşıyor (yalnız Poisson kıvılcım gürültüsü bağımsız); okuma doğrusal olmayan; K→∞ tablosu kayan zaman gecikmesini yok sayar. Bu yüzden GPU aşamasında K'yı artırmak tek başına yeterli sayılmaz.
+* **τ_valence (okuma entegrasyon süresi)**, K=1, frozen p_hit (tohum 110 / tohum 111):
+
+| τ (sn) | 0,02 | 0,04 | 0,08 | 0,15 (varsayılan) | 0,3 | 0,6 | 1,2 |
+|---|---|---|---|---|---|---|---|
+| tohum 110 | (koşuyor) | 0,583 | 0,495 | 0,510 | 0,448 | 0,448 | 0,375 |
+| tohum 111 | (koşuyor) | 0,615 | — | 0,552 | — | — | — |
+
+  Uzun entegrasyon (≥0,3 sn) açıkça kötü (hareket eden canlı için gradyan bulanıyor, gecikme); kısa τ=0,04 iki tohumda da varsayılandan ≈+0,06–0,07 iyi ama τ=0,08 bu sırayı bozuyor (tek örneklem gürültüsü). Varsayılan τ **değiştirilmedi**: ön-kayıtlı doğrulayıcılar bu beyin tanımıyla koştu; τ değişirse yeni ön-kayıt gerekir (kural 2).
+
