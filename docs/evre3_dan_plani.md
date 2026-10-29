@@ -87,3 +87,11 @@ Topluluk (gürültü azaltma) ile kısa okuma süresi (gecikme azaltma) birbirin
 
 Yorum: K=8 + kısa τ, gürültüsüz tablo düzeyine (≈0,8) ulaşıyor; yani frozen kolun tavanı artık referansa (0,98) uzaklığın çoğunu oluşturan başka bir şey (okumanın kendisi/hareket kuralı). Tek ön-eğitim hattı (dev tohumu 100), iki oyun tohumu; **doğrulayıcı koşulmadı**. Bu ayarın "beyin tanımı" olması için yeni ön-kayıt + bağımsız tohumlar gerekir (kural 2/3): sıradaki iş.
 
+**Genelleme (geliştirme, ön-eğitim 100; oyun tohumları 112 / 115; KANIT DEĞİL):** aynı ayar (K=8, τ=0,04) diğer oyunlarda:
+
+| oyun (tohum) | anosmik | K=1, τ=0,04 | **K=8, τ=0,04** | referans | K=8 − anosmik [%99 GA] |
+|---|---|---|---|---|---|
+| O1b (112) | 0,208 | 0,615 | **0,792** | 0,958 | +0,583 [+0,453; +0,708] |
+| O2-yakın (115) | 0,333 | 0,698 | **0,729** | 0,812 | +0,396 [+0,292; +0,484] |
+
+O1b'de O1a'daki kazanç yinelendi (+0,18, K=1 aynı τ'ya göre). **O2-yakın'da kazanç küçük (+0,03) ve referans tavanı 0,81'e yakın**: taban ile referans arasında zaten ≈0,11–0,15 boşluk var, yani "ölçek kazancı ≥ δ=0,15" ölçütü bu oyunda tavan etkisiyle sınanamaz (güç benzetimi: δ'da 0,07). Bu yüzden ön-kayıtlı ölçek doğrulayıcısı (`docs/olcek_plani.md`, K-036) O2-yakın'ı kapsam dışı bıraktı.
