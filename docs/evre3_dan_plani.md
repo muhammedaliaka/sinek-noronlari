@@ -102,3 +102,30 @@ K=8 + τ=0,04 ile frozen kolu gürültüsüz tablo düzeyine (≈0,8) çıkıyor
 * **H2 — motor kuralı.** `contrast = (v_L − v_R)/(|v_L|+|v_R|+ε)` normalleştirir; değerler ε=0,05'e yakınsa dönüş zayıflar, büyükse işaret gürültüsü (±1) doğrudan dönüş hızına geçer. `turn_gain=10`, `wander_σ=1` elle seçilmiştir. Sınama: gürültüsüz tablo ile ε ∈ {0,01; 0,05; 0,2} × `turn_gain` ∈ {5; 10; 20} (geliştirme tohumunda; sonra hangi parametrenin doğrulayıcıda sabitleneceği yeni ön-kayıtta).
 * **H3 — sensör SNR'si.** Anten arası mesafe × gradyan; referans ayrıca gradyanı kusursuz kullanıyor. Sınama: referans kolunu aynı anten gürültüsüyle koşmak ("sensör sınırı") — referans zaten sensörsüz (dünyayı doğrudan okur) ise bu sınır ölçülemez; bu durumda H3 ayrıştırılamaz ve bu bir sınırlılık olarak yazılır.
 * Doğrulayıcı kuralı: bu sınamalar geliştirme tohumlarındadır (100-149); ayarlardan biri doğrulayıcıya girecekse yeni ön-kayıt + güç benzetimi gerekir (R-1, R-6).
+
+### 6.4 Kalan boşluğun ayrıştırması: motor kuralı baskın (geliştirme, O1a tohum 110, gürültüsüz tablo; KANIT DEĞİL)
+Araç: `python3 -I -m sinek.experiments.gap_dev` (K→∞ gürültüsüz tablo, öğrenme kapalı, CRN). **Not:** oyun kontrol noktalarındaki gerçek motor ayarı `turn_gain=60, contrast_eps=2,0, wander_σ=1` (`Config` varsayılanları 10/0,05 değil; ilk tarama yanlış rejimdeydi ve düzeltildi).
+
+| değer kaynağı (motor ε=2, kazanç 60) | p_hit |
+|---|---|
+| referans (elle) | 0,984 |
+| öğrenilmiş tablo | 0,818 |
+| tablo, iki yarımküre ortalaması (sol–sağ asimetri YOK) | 0,812 |
+| tablo, canlı başına doğrusal V=a·s | 0,875 |
+
+→ **H4 (sol–sağ kazanç asimetrisi) ve H1 (eğri biçimi) boşluğu açıklamıyor** (simetrikleştirme 0,818→0,812; doğrusallaştırma +0,06).
+
+Motor kuralı taraması (aynı gürültüsüz tablo; satır ε, sütun turn_gain):
+
+| ε \ turn_gain | 10 | 20 | 40 | **60** | 120 |
+|---|---|---|---|---|---|
+| 0,02 | 0,917 | 0,958 | 0,958 | 0,958 | 0,948 |
+| 0,1 | 0,870 | 0,906 | 0,958 | 0,958 | 0,958 |
+| 0,5 | 0,635 | 0,771 | 0,901 | 0,927 | 0,958 |
+| **2 (mevcut)** | 0,484 | 0,547 | 0,719 | **0,818** | 0,891 |
+| 8 | 0,307 | 0,396 | 0,406 | 0,521 | 0,714 |
+
+(Aynı taramada referans: ε=2/60 → 0,984; ε=0,1/60 → 1,000.)
+
+**Bulgu:** öğrenilmiş değerlerin ölçeği (≈0–0,5) ε=2'ye göre küçüktür; kontrast paydası ε tarafından yutulduğundan dönüş hızı ≈ (gain/ε)·Δv (neredeyse doğrusal, normalleşmemiş) ve değer ne kadar zayıfsa o kadar az dönülür. ε'yi değer ölçeğine göre küçültmek (0,1–0,5) gürültüsüz tabloyu 0,82 → 0,93–0,96'ya, yani **referansa 0,03–0,05 yakına** çıkarıyor. Yani kalan boşluğun büyük kısmı **öğrenilmiş devrede değil, elle yazılmış motor normalleştirmesindedir (R-11)**.
+**Çekince (sınanıyor):** küçük ε, gürültülü okumada işareti büyütür (kontrast ±1'e doymaya yaklaşır); K=1 ve K=8 ile gürültülü etkisi `scale_dev --eps --turn-gain` ile ölçülüyor (tohum 110). Bu bir motor ayar değişikliğidir, "daha zeki beyin" değil; doğrulayıcıya girerse yeni ön-kayıt + güç benzetimi gerekir (R-1, R-6), ve ε'nın kullanıcı-seçimli ayar olduğu açıkça yazılır.
