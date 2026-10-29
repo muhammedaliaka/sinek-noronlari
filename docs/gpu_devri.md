@@ -30,7 +30,7 @@ Durum etiketi: **[denendi: Linux/CPU]** bu ortamda çalıştırıldı; **[denenm
 5. Doğrulayıcıya girecek her yeni kural/ölçüt: önce ön-kayıt belgesi commit (kural 2), sıfır-etki + bilinen-etki benzetimi (kural 3, `python -m sinek.experiments.power2b`).
 
 ## 4. Bilinen tuzaklar
-* Konteyner/oturum yeniden başlayınca arka plan işleri ölür: `scripts/run_validators.sh` ve O3/O4 kol-kol kontrol noktaları (K-029) bunun içindir; yeni uzun koşular da kontrol noktalı yazılmalı.
+* Konteyner/işçi süreci yeniden başlayınca arka plan işleri ölür (bu oturumda ≥5 kez, ≈15–50 dk aralıkla; disk korunur): `scripts/run_validators.sh` ve O1–O4 doğrulayıcılarının kol-kol kontrol noktaları (K-029) bunun içindir. **Evre 1/2b eğitim hattında (`evre1.run`) bölüm-bölüm kontrol noktası yok**; yeni uzun koşular kontrol noktalı yazılmalı.
 * `pkill -f <desen>` kendi kabuğunu öldürebilir; PID ile öldür.
 * CUDA'da `torch.Generator(device=...)` farklı sayı üretir: CPU sonuçlarıyla nokta nokta eşleşme beklenmez (K-030).
 * Rakamlar kural 4 etiketleriyle: [doğrulandı]/[doğrulanmadı]. FlyWire verisi proje lisansı belirlenmeden depoya alınmaz (K-031).
