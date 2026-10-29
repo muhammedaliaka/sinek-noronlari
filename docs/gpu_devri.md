@@ -11,6 +11,8 @@ Dil: Türkçe, dürüst raporlama (başarısızlıklar da yazılır). Sinek beyn
 | O3 (yalnız temas), O4a/O4c (yanıltıcı koku, sönüm) | **bitti:** O4a BAŞARILI, O4c BAŞARILI, O3 eşdeğerlik GEÇTİ (negatif kontrol; yer belleği yok). Sönüm elle yazılmış δ terimine dayanır | `docs/odor_o3_o4_sonuclari.md` |
 | Başarıyı sınırlayan şey | **değer okumasının Poisson gürültüsü** (K→∞ gürültüsüz tablo 0,818 vs 0,510; K=4 yalnız 0,552) — K-028 | `docs/evre3_dan_plani.md` §6 |
 | Ölçek ekseni doğrulayıcısı (K=8 + τ=0,04, O1a/O1b, tohum 250–253) | **bitti: 4/4 BAŞARILI** (frozen 0,45–0,52 → ens 0,70–0,82; referans 0,95–0,99; ağırlıklar aynı, maliyet ≈K×) — K-038 | `docs/olcek_sonuclari.md` |
+| Öğrenme HIZI (K-040) | mevcut beyin kolay protokolde **1 denemede** öğreniyor (tavan); hız farkı için zor görev gerekti → O5 | `docs/evre3_dan_plani.md` §7 |
+| **O5** (olasılıklı iki-kollu koku, %80/%20, bölüm 21'de tersine çevirme) | oyun + güç benzetimi + **ön-kayıt KESİNLEŞTİ (commit `35d2db4`, K-042)**; doğrulayıcı koşular (tohum 260/261, `scripts/run_o5_validators.sh`) 2026-10-29'da başladı — sonuç bu satıra işlenecek. Pilot (dev): plastik ≈0,63–0,68 vs öğrenmesiz ≈0,5; hız–gürültü ödünleşimi görünüyor (K-041) | `docs/odor_o5_plani.md` |
 | DAN devresi veriden | kapı 3.3 **karşılanmadı**: V1 etkisiz, V2/V3 ya kararsız (g ≥ 0,5) ya sönümü bozuyor (düşük g) | `docs/evre3_dan_plani.md` §5, `docs/dan_girdi_analizi.md` |
 | Dış kaynaklar | BANC rakamları kısmen, lisanslar tablo halinde (FlyWire **CC BY-NC**) | `docs/dis_kaynak_dogrulamalari.md` |
 
@@ -29,6 +31,7 @@ Durum etiketi: **[denendi: Linux/CPU]** bu ortamda çalıştırıldı; **[denenm
 3. **K ≥ 16 ile motor ε taraması** (K-039): gürültüsüz tabloda ε=0,1–0,5 → 0,93–0,96, ama K=8'de kazanç küçük ve kör kol çöküyor; `scale_dev --ks 16,32,64 --eps 0.5 --turn-gain 60 --oracle` (kör karşılaştırıcı için eşleşmiş-gürültü kolu tasarlanmadan doğrulayıcıya alınmaz).
 3b. **Paylaşılan ağırlıklı öğrenen topluluk**: `EnsembleBrain` kopyaları dondurulmuş okuma içindir. Plastik topluluk için tek W + K gürültü örneği tasarımı gerekir; sıfır-etki sınaması: K=1 birebir aynı.
 4. **DAN sönüm yolu**: düşük kazançlı MBON→DAN plato yükseltiyor ama sönümü bozuyor; PPL1/aracı nöron yolu (`dan_girdi_analizi` bölüm D). Kapı: kararlılık (sahte öğretmen < 0,05, DAN tepe < 3×V0) **sönümden önce**.
+4b. **O5 üzerinde beyin varyantı karşılaştırması** (O5 doğrulayıcısı bitip zemin doğrulandıktan sonra): η ölçeği taraması, K=8+τ=0,04, ve HİPOTEZ (SINANMADI): hızlı + yavaş plastisite birlikte (örn. iki bileşenli W: hızlı-sönen + yavaş-kalıcı) hız–gürültü ödünleşimini hafifletir — durağan fazda yavaş bileşen gürültüyü ortalar, tersine çevirmede hızlı bileşen çabuk döner. Önce R-8 kuram/hesap kontrolü ve tahmin yazılır, sonra `o5_dev` (dev tohumları <200) ile sınanır; doğrulayıcıya girecekse yeni ön-kayıt + yeni tohum (260/261 yandı).
 5. Doğrulayıcıya girecek her yeni kural/ölçüt: önce ön-kayıt belgesi commit (kural 2), sıfır-etki + bilinen-etki benzetimi (kural 3, `python -m sinek.experiments.power2b`).
 
 ## 4. Bilinen tuzaklar
