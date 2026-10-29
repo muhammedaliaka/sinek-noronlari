@@ -91,6 +91,13 @@ python3 -I -m sinek.experiments.odor_validate_scale --pre results/odor_val/pre_s
 
 Varsayılanlar (`--agents 24 --trials 16 --seconds 25 --k 8 --tau 0.04 --delta 0.15 --delta-eq 0.10 --boot 10000`) bu belgedeki ayarlarla aynıdır. Kol-kol kontrol noktası (V-03) ve `scripts/run_scale_validators.sh` kuyruğu yalnızca kesilen koşuyu **aynı hesapla** sürdürür; ölçüt ya da eşik keşfetmez.
 
+### 7.1 Yürütme düzeni: canlı parçaları (K-037; ön-kayıttan sonra, hiçbir topluluk-kolu sonucu görülmeden eklendi)
+
+İlk deneme (parçasız, tüm 24 canlı bir arada) başlatıldı; topluluk kolları (K=8 ⇒ adım başına ≈8× işlem) tek kolda ≳1 saat sürecek ve işçi süreci her ≈15–50 dakikada bir yeniden başladığı için hiç bitmeyecekti (kol içinde ilerleme kaydı yok). Bu yüzden **yalnız yürütme düzeni** değişti: 24 canlı **4 eşit parçaya (6 canlı)** bölünür; her parça (kol × parça) ayrı kontrol noktasına yazılır; parça c'nin dünya tohumu `oyun_tohumu + 1000·c` (tüm kollarda aynı ⇒ CRN eşliliği ve parçalar arası bağımsız yerleşim korunur). Örneklem (24 canlı × 16 deneme), kollar, ölçütler, eşikler, kapılar, K, τ, popülasyonlar, oyun tohumları **değişmedi**; komutlardaki varsayılan `--chunks 4`.
+
+* İlk (parçasız) denemede yalnızca referans ve anosmik kollar bitti: referans p_hit 0,987 / 0,995 / 0,979 / 0,979, anosmik 0,279 / 0,255 / 0,273 / 0,253 (O1a 250, O1a 251, O1b 252, O1b 253; hepsi kapı aralığında). Bu değerler **görüldü**; hiçbir karar buna dayanmadı, parçalı düzende kollar yeniden koşulur ve kapılar yeni değerlerle denetlenir. İlk deneme dosyaları `results/scale_val/_unchunked_attempt/` altında saklıdır.
+* Sınama (R-6): `tests/test_odor_validate_scale.py` — K=1 ve varsayılan τ ile `ens` ve `anosmic_ens` kolları parçalı düzende taban kollarla **birebir aynı** (sıfır-etki); eksik tek parça yeniden koşulunca sonuç aynı; parçalar bağımsız yerleşim alıyor.
+
 ## 8. Elle yazılmış / öğrenilmemiş bileşenler (R-11)
 
 * DAN hata terimi (`last_delta = gate·(ödül_hedefi·ödül − valans)`) elle yazılmıştır (Evre 3.3 kapısı karşılanmadı).

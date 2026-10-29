@@ -30,26 +30,44 @@ ARM_DEFS = {                      # kol → (oyun kolu, topluluk mu)
 KEYS = ("slot", "time", "path_len", "first_odor_step")
 
 
+CHUNK_STRIDE = 1000               # parça c için dünya tohumu = seed + CHUNK_STRIDE·c (parça 0 = seed)
+
+
+def _chunks(n_agents: int, chunks: int) -> list[list[int]]:
+    if chunks < 1 or n_agents % chunks:
+        raise ValueError("canlı sayısı parça sayısına bölünmeli")
+    m = n_agents // chunks
+    return [list(range(c * m, (c + 1) * m)) for c in range(chunks)]
+
+
 def run_arms(pre, game: str, seed: int, agents: int, trials: int, seconds: float, k: int, tau: float, verbose=True,
-             part_dir=None, key: str = "") -> dict:
-    ids = list(range(min(agents, pre.world.B)))
-    res, t0 = {}, time.time()
+             part_dir=None, key: str = "", chunks: int = 1) -> dict:
+    """Her kol canlıların `chunks` eşit parçasında ayrı koşulur (parça başına dünya tohumu seed + 1000·c; TÜM kollarda aynı → CRN eşli kalır)
+    ve parça başına kontrol noktasına yazılır: uzun topluluk kolları yeniden başlamalarda en fazla bir parça kaybeder (K-037).
+    `chunks=1` önceki davranıştır."""
+    ids_all = list(range(min(agents, pre.world.B)))
+    parts, res, t0 = _chunks(len(ids_all), chunks), {}, time.time()
     for name, (arm, ens) in ARM_DEFS.items():
-        path, z = _part(part_dir, f"sc_{name}", key)
-        if z is not None:
-            res[name] = {kk: z[kk] for kk in KEYS}
+        pieces = []
+        for ci, ids in enumerate(parts):
+            path, z = _part(part_dir, f"sc_{name}_c{ci}", key)
+            if z is not None:
+                pieces.append({kk: z[kk] for kk in KEYS})
+                if verbose:
+                    print(f"[{time.time() - t0:6.0f}s] {game} {name:<12} parça {ci + 1}/{chunks} kontrol noktasından okundu", flush=True)
+                continue
+            c = make_game_creature(pre, game, arm, ids, trials, seed + CHUNK_STRIDE * ci)
+            if ens:
+                c.brain = EnsembleBrain(c.brain, k, tau_valence=tau)
+            out = play(c, seconds, learn=False, test=True, n_agents=len(ids))
+            pieces.append({kk: out[kk] for kk in KEYS})
+            if path is not None:
+                np.savez(path, key=key, **pieces[-1])
             if verbose:
-                print(f"[{time.time() - t0:6.0f}s] {game} {name:<12} kontrol noktasından okundu p_hit={hits(res[name]).mean():.3f}", flush=True)
-            continue
-        c = make_game_creature(pre, game, arm, ids, trials, seed)
-        if ens:
-            c.brain = EnsembleBrain(c.brain, k, tau_valence=tau)
-        out = play(c, seconds, learn=False, test=True, n_agents=len(ids))
-        res[name] = {kk: out[kk] for kk in KEYS}
-        if path is not None:
-            np.savez(path, key=key, **res[name])
+                print(f"[{time.time() - t0:6.0f}s] {game} {name:<12} parça {ci + 1}/{chunks} p_hit={hits(out).mean():.3f}", flush=True)
+        res[name] = {kk: np.concatenate([p[kk] for p in pieces], axis=0) for kk in KEYS}
         if verbose:
-            print(f"[{time.time() - t0:6.0f}s] {game} {name:<12} p_hit={hits(out).mean():.3f}", flush=True)
+            print(f"[{time.time() - t0:6.0f}s] {game} {name:<12} p_hit={hits(res[name]).mean():.3f}", flush=True)
     return res
 
 
@@ -87,6 +105,7 @@ def main(argv=None) -> dict:
     ap.add_argument("--agents", type=int, default=24)
     ap.add_argument("--trials", type=int, default=16)
     ap.add_argument("--seconds", type=float, default=25.0)
+    ap.add_argument("--chunks", type=int, default=4, help="canlılar bu sayıda parçaya bölünüp kol-kol-parça kontrol noktasıyla koşulur (K-037)")
     ap.add_argument("--k", type=int, default=8)
     ap.add_argument("--tau", type=float, default=0.04)
     ap.add_argument("--delta", type=float, default=0.15)
@@ -111,12 +130,12 @@ def main(argv=None) -> dict:
     part_dir = out / "partial"
     part_dir.mkdir(exist_ok=True)
     key = json.dumps({"game": a.game, "seed": a.seed, "agents": a.agents, "trials": a.trials, "seconds": a.seconds, "k": a.k, "tau": a.tau,
-                      "pre_sha": _sha(a.pre)}, sort_keys=True)
+                      "chunks": a.chunks, "pre_sha": _sha(a.pre)}, sort_keys=True)
     t0 = time.time()
-    res = run_arms(pre, a.game, a.seed, a.agents, a.trials, a.seconds, a.k, a.tau, part_dir=part_dir, key=key)
+    res = run_arms(pre, a.game, a.seed, a.agents, a.trials, a.seconds, a.k, a.tau, part_dir=part_dir, key=key, chunks=a.chunks)
     ev, leak = evaluate(a.game, res, thr)
     meta = {"stamp": "**PİLOT — kanıt değildir.**" if a.pilot else "Doğrulayıcı koşu.", "pre": a.pre, "pre_sha": _sha(a.pre), "git": _git_head(),
-            "k": a.k, "tau": a.tau}
+            "k": a.k, "tau": a.tau, "chunks": a.chunks}
     text = report(a.game, a.seed, res, ev, leak, thr, meta)
     (out / "summary.md").write_text(text, encoding="utf-8")
     (out / "results.json").write_text(json.dumps({"args": vars(a), "meta": meta, "eval": ev, "leak": leak,
