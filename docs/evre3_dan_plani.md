@@ -129,3 +129,20 @@ Motor kuralı taraması (aynı gürültüsüz tablo; satır ε, sütun turn_gain
 
 **Bulgu:** öğrenilmiş değerlerin ölçeği (≈0–0,5) ε=2'ye göre küçüktür; kontrast paydası ε tarafından yutulduğundan dönüş hızı ≈ (gain/ε)·Δv (neredeyse doğrusal, normalleşmemiş) ve değer ne kadar zayıfsa o kadar az dönülür. ε'yi değer ölçeğine göre küçültmek (0,1–0,5) gürültüsüz tabloyu 0,82 → 0,93–0,96'ya, yani **referansa 0,03–0,05 yakına** çıkarıyor. Yani kalan boşluğun büyük kısmı **öğrenilmiş devrede değil, elle yazılmış motor normalleştirmesindedir (R-11)**.
 **Çekince (sınanıyor):** küçük ε, gürültülü okumada işareti büyütür (kontrast ±1'e doymaya yaklaşır); K=1 ve K=8 ile gürültülü etkisi `scale_dev --eps --turn-gain` ile ölçülüyor (tohum 110). Bu bir motor ayar değişikliğidir, "daha zeki beyin" değil; doğrulayıcıya girerse yeni ön-kayıt + güç benzetimi gerekir (R-1, R-6), ve ε'nın kullanıcı-seçimli ayar olduğu açıkça yazılır.
+
+### 6.5 Motor kuralı gürültülü okumada (geliştirme, O1a tohum 110, K=8, τ=0,04; tek örneklem; KANIT DEĞİL)
+`scale_dev --eps --turn-gain` (aynı motor TÜM kollara uygulanır). Mevcut motor (ε=2, kazanç 60) için K=8 sonucu daha önce 0,807 (anosmik 0,286).
+
+| ε | turn_gain | K=∞ tablo | K=1 | **K=8** | anosmik | referans |
+|---|---|---|---|---|---|---|
+| 2 (mevcut) | 60 | 0,818 | 0,583* | 0,807 | 0,286 | 0,984 |
+| 0,5 | 60 | 0,938 | 0,401 | **0,859** | 0,115 | 1,000 |
+| 0,1 | 60 | 0,953 | 0,328 | **0,891** | 0,005 | 1,000 |
+| 0,1 | 30 | 0,953 | 0,495 | 0,849 | 0,073 | 1,000 |
+| 0,5 | 120 | 0,938 | 0,203 | 0,807 | 0,021 | 1,000 |
+
+(*τ=0,04, K=1.) Okuma:
+* K=8'de küçük ε, p_hit'i en çok +0,05…+0,08 artırıyor (0,807 → 0,86–0,89); tek örneklemde kümeli SE ≈0,04–0,05, yani ≈1–1,5 SE: **ayırt edilebilir bir kazanç sayılmaz.** Gürültüsüz tablonun vaadi (0,95) gerçekleşmiyor: K=8 hâlâ gürültülü.
+* K=1'de küçük ε **zarar veriyor** (0,58 → 0,20–0,50): işaret gürültüsü doğrudan dönüş hızına geçiyor.
+* **Kör karşılaştırıcı çöküyor:** anosmik p_hit 0,286 → 0,005–0,12 (koku yokken bile değer gürültüsü kontrastı ±1'e taşıyor; yaratık yerinde dönüyor). Bu "koku kazancı"nı (frozen − anosmik) yapay olarak şişirir (+0,75…+0,89) ve O1 anosmik-pencere kapısını (0,15–0,45) bozar; yani ölçütler bu motorla yeniden tasarlanmak zorunda kalırdı.
+* **Karar (K-039):** motor ε/kazanç ayarı doğrulayıcıya **alınmadı**; kazanç küçük, tek örneklem ve kör karşılaştırıcıyı bozuyor. ε, gürültü tabanına (≈ okuma SD'si) göre seçilmiş bir ölü-bölge gibi çalıştığı için mevcut ε=2 savunulabilir bir ayar. GPU aşamasında (K ≥ 16, daha az gürültü) ε–K birlikte taranmalıdır; o zaman kör karşılaştırıcı için ayrı bir tanım (ör. eşleşmiş-gürültü kör kol) gerekir.

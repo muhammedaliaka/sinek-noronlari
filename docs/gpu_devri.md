@@ -26,7 +26,8 @@ Durum etiketi: **[denendi: Linux/CPU]** bu ortamda çalıştırıldı; **[denenm
 ## 3. GPU aşamasının öncelik sırası (dürüst gerekçe: K-028)
 1. **Ölçek/gürültü ekseni**: `python -m sinek.experiments.scale_dev --pre results/odor_games/pre_s100.npz --game O1a --seed 110 --ks 8,16,32,64 --oracle` (ön-eğitim dosyası `results/` altındadır, git'te yok; yoksa `odor_pretrain` ile yeniden üretilir). Soru: K ile frozen p_hit 0,51 → 0,818 (K→∞) doğru yükseliyor mu, ve ne kadar K gerek? Dev tohumları 100–149, doğrulayıcı tohumları ≥200 **kullanılamaz** (R-2).
 2. **τ_valence** (okuma entegrasyon süresi) taraması **yapıldı** (CPU, dev): uzun τ (≥0,3) kötü, kısa τ=0,02–0,04 + K=8 en iyi (`evre3_dan_plani.md` §6.1–6.2). Ayarlar doğrulayıcıda sabit; GPU'da K/τ ızgarasını geniş K ile (32, 64) yeniden aç ama yeni doğrulayıcı için yeni ön-kayıt gerekir.
-3. **Paylaşılan ağırlıklı öğrenen topluluk**: `EnsembleBrain` kopyaları dondurulmuş okuma içindir. Plastik topluluk için tek W + K gürültü örneği tasarımı gerekir; sıfır-etki sınaması: K=1 birebir aynı.
+3. **K ≥ 16 ile motor ε taraması** (K-039): gürültüsüz tabloda ε=0,1–0,5 → 0,93–0,96, ama K=8'de kazanç küçük ve kör kol çöküyor; `scale_dev --ks 16,32,64 --eps 0.5 --turn-gain 60 --oracle` (kör karşılaştırıcı için eşleşmiş-gürültü kolu tasarlanmadan doğrulayıcıya alınmaz).
+3b. **Paylaşılan ağırlıklı öğrenen topluluk**: `EnsembleBrain` kopyaları dondurulmuş okuma içindir. Plastik topluluk için tek W + K gürültü örneği tasarımı gerekir; sıfır-etki sınaması: K=1 birebir aynı.
 4. **DAN sönüm yolu**: düşük kazançlı MBON→DAN plato yükseltiyor ama sönümü bozuyor; PPL1/aracı nöron yolu (`dan_girdi_analizi` bölüm D). Kapı: kararlılık (sahte öğretmen < 0,05, DAN tepe < 3×V0) **sönümden önce**.
 5. Doğrulayıcıya girecek her yeni kural/ölçüt: önce ön-kayıt belgesi commit (kural 2), sıfır-etki + bilinen-etki benzetimi (kural 3, `python -m sinek.experiments.power2b`).
 
