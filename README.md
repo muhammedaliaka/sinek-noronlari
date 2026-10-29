@@ -163,7 +163,7 @@ deneme sayısı 16'ya çıkarıldı. Doğrulayıcı tohumlar 30 ve 31 (geliştir
 
 * Ön-kayıtlı karar kuralına göre **Evre 2b ölçütü başarılı**. Etki orta büyüklükte (v1'de 0,90–0,92'ydi; farklı hareket okuması nedeniyle doğrudan karşılaştırılamaz).
 * Hata sinyali (dopamin) hâlâ elle yazılı; "hataları daha hızlı anlama" bu sonuçla iddia edilemez. Gerçek sinek davranışı hakkında iddia yoktur.
-* E1 sınıf-karıştırma kontrolü sürüyor (ana karar kuralının dışında).
+* E1 sınıf-karıştırma kontrolü (ana karar kuralının dışında): **genel FAIL** (karıştırma 1 geçti, karıştırma 2 geçmedi: p=0,03); "gerçek sınıf yapısı işe yarıyor" iddiası kurulamaz ([`docs/evre2b_e1_s30.md`](docs/evre2b_e1_s30.md)).
 
 Ayrıntılar: [`docs/evre2b_sonuclar.md`](docs/evre2b_sonuclar.md) · güç analizi: [`docs/evre2b_guc_analizi.md`](docs/evre2b_guc_analizi.md).
 

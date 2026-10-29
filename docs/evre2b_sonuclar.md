@@ -6,7 +6,7 @@ Plan ve ölçütler koşulardan **önce** yazılıp commit edilmiştir: [`evre2b
 ## Kısa özet
 
 İki bağımsız doğrulayıcı koşuda (tohum **30** ve **31**; geliştirmede hiç kullanılmadı) ön-kayıtlı **7 ölçütün 7'si de geçti** (G, A1, A2, A3, C, B1, B2). Ön-kayıtlı karar kuralı
-("hepsi iki koşuda da") gereği hüküm: **Evre 2b ölçütü başarılı.** (Yapısal kontrol E1 ana karar kuralının parçası değildir; sonucu aşağıda, `bekliyor` durumunda.)
+("hepsi iki koşuda da") gereği hüküm: **Evre 2b ölçütü başarılı.** (Yapısal kontrol E1 ana karar kuralının parçası değildir; sonucu aşağıda: **E1 genel FAIL**.)
 
 | | Tohum 30 | Tohum 31 |
 |---|---|---|
@@ -106,8 +106,17 @@ Grafikler: öğrenme eğrisi ([s30](img/evre2b_s30_ogrenme_egrisi.png), [s31](im
 
 ## E1 — sınıf etiketi karıştırma kontrolü (ana karar kuralının dışında)
 
-**Durum: bekliyor.** Tohum 30 kurulumunda MBON "yaklaş/kaçın" etiketleri karıştırılmış iki koşu (`class_shuffle_seed` 1 ve 2) çalışıyor; koku çifti karıştırılmış ağ için yeniden kalibre edilir.
-Ölçüt (plan §7): karıştırılmış `plastic`'in A12 oranı gerçek koşudan düşük (p < 0,01) ve karıştırılmış ağın seçim oranı ≥ 0,40. Sonuç `evre2b_e1_s30.md` olarak eklenecek.
+**Durum: tamamlandı — E1 genel FAIL (ana karar kuralının dışında).** Tohum 30 kurulumunda MBON "yaklaş/kaçın" etiketleri karıştırılmış iki koşu (`class_shuffle_seed` 1 ve 2); koku çifti karıştırılmış ağ için yeniden kalibre edildi.
+Ölçüt (plan §7): karıştırılmış `plastic`'in A12 oranı gerçek koşudan düşük (p < 0,01) ve karıştırılmış ağın seçim oranı ≥ 0,40.
+
+| koşu | plastic A-oranı [GA] | seçim oranı | p | E1 |
+|---|---|---|---|---|
+| gerçek etiketler | 0,72 [0,67; 0,76] | — | — | — |
+| karıştırma 1 | 0,47 [0,38; 0,56] | 0,46 | <0,0001 | PASS |
+| karıştırma 2 | 0,64 [0,58; 0,70] | 0,83 | 0,0299 | **FAIL** |
+
+* Ön-kayıt gereği: E1 FAIL → "gerçek sınıf yapısı işe yarıyor" iddiası **kurulamaz**. Evre 2b ana kararı etkilenmez.
+* Karıştırma koşularının B fazı işçi süreci yeniden başlamalarıyla öldüğü için sonuçlar `after_A.npz` durumundan yeniden hesaplandı (sıfır-etki sınaması geçti); ayrıntı, dürüst yorum ve hipotezler: [`evre2b_e1_s30.md`](evre2b_e1_s30.md), K-033/K-035, E-14.
 
 ## Yeniden üretme
 
