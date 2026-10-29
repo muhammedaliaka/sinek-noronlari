@@ -12,7 +12,7 @@ Dil: Türkçe, dürüst raporlama (başarısızlıklar da yazılır). Sinek beyn
 | Başarıyı sınırlayan şey | **değer okumasının Poisson gürültüsü** (K→∞ gürültüsüz tablo 0,818 vs 0,510; K=4 yalnız 0,552) — K-028 | `docs/evre3_dan_plani.md` §6 |
 | Ölçek ekseni doğrulayıcısı (K=8 + τ=0,04, O1a/O1b, tohum 250–253) | **bitti: 4/4 BAŞARILI** (frozen 0,45–0,52 → ens 0,70–0,82; referans 0,95–0,99; ağırlıklar aynı, maliyet ≈K×) — K-038 | `docs/olcek_sonuclari.md` |
 | Öğrenme HIZI (K-040) | mevcut beyin kolay protokolde **1 denemede** öğreniyor (tavan); hız farkı için zor görev gerekti → O5 | `docs/evre3_dan_plani.md` §7 |
-| **O5** (olasılıklı iki-kollu koku, %80/%20, bölüm 21'de tersine çevirme) | oyun + güç benzetimi + **ön-kayıt KESİNLEŞTİ (commit `35d2db4`, K-042)**; doğrulayıcı koşular (tohum 260/261, `scripts/run_o5_validators.sh`) 2026-10-29'da başladı — sonuç bu satıra işlenecek. Pilot (dev): plastik ≈0,63–0,68 vs öğrenmesiz ≈0,5; hız–gürültü ödünleşimi görünüyor (K-041) | `docs/odor_o5_plani.md` |
+| **O5** (olasılıklı iki-kollu koku, %80/%20, bölüm 21'de tersine çevirme) | ön-kayıtlı doğrulayıcı (tohum 260/261, K-042) **bitti: KISMİ — iddia yok** (260 BAŞARILI, 261 BAŞARISIZ; K-044). Post-hoc: seçicilik kazancı iki popülasyonda aynı (+0,15), ödül-oranı ölçütü yaklaşmayla karışıyordu (E-15). O5b için yeni ön-kayıt + yeni tohum + ≥4 popülasyon gerekir; tohumlar 260/261 yandı | `docs/odor_o5_sonuclari.md` |
 | DAN devresi veriden | kapı 3.3 **karşılanmadı**: V1 etkisiz, V2/V3 ya kararsız (g ≥ 0,5) ya sönümü bozuyor (düşük g) | `docs/evre3_dan_plani.md` §5, `docs/dan_girdi_analizi.md` |
 | Dış kaynaklar | BANC rakamları kısmen, lisanslar tablo halinde (FlyWire **CC BY-NC**) | `docs/dis_kaynak_dogrulamalari.md` |
 

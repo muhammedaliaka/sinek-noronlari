@@ -1,6 +1,7 @@
 # O5 — olasılıklı iki-kollu koku oyunu, oturum içi tersine çevirme — ÖN-KAYIT (KESİNLEŞTİ)
 
 > Bu belge doğrulayıcı koşulardan **önce** commit edilir (R-1). Aşağıdaki ölçütler, eşikler, kollar, tohumlar ve karar kuralı koşudan sonra değişmez; başarısızlık olduğu gibi raporlanır (R-3). Koşudan sonra yazılan her açıklama "post-hoc" diye etiketlenir ve hükmü değiştirmez. Dil: Türkçe, dürüst raporlama.
+> **Sonuç (koşudan sonra eklenen işaretçi; ölçütler değişmedi): KISMİ — iddia yok. Ayrıntı ve post-hoc çözümleme: [`docs/odor_o5_sonuclari.md`](odor_o5_sonuclari.md).**
 > Tarih: 2026-10-29. Geliştirme tohumu 120 pilotu (§9) ve güç benzetimi (§7) bu belgeden önce yapıldı; doğrulayıcı tohumlara (260, 261) hiç dokunulmadı.
 
 ## 1. Soru ve neden
