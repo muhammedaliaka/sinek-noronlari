@@ -38,3 +38,21 @@ Okuma (post-hoc, etiketli):
 
 ## 4. Sonraki adım (ön-kayıtlı değil; öneri)
 Tohumlar 260/261 yandı (R-2). Yeni bir O5 doğrulayıcısı (O5b) için **yeni ön-kayıt + yeni tohumlar** gerekir ve şunlar gözetilmelidir: (a) karar veren ölçü olarak seçicilik (temaslı bölümlerde iyi koku seçme ya da net tercih) — yaklaşmayı ayrı betimsel/kapı yap; (b) δ'yı bu koşunun popülasyonlarına bakarak seçme riskini ("kazanan lanet") ve güç benzetimini **popülasyon heterojenliğiyle** (frozen temas 0,4–0,65) yap (R-6); (c) ≥4 popülasyon (koku çifti) — naive kollar ön-eğitim gerektirmez, yalnız koku desenleri; (d) yeni tohumlar. Bu koşunun verisi O5b'nin ölçütünü seçmek için kullanılırsa belgede açıkça "bu veriden türetildi" yazılmalı. Bu, bir iddia değil; bir plan önerisidir.
+
+## 5. Geliştirme kolları (KANIT DEĞİL; geliştirme popülasyonu 102, oyun tohumu 132; 48 yaşam; aynı dünyalar, eşli)
+
+**5.1 Düz O5'in geliştirme tekrarı** (ön-kayıt kuralıyla, betimsel): P1 +0,171 [+0,085; +0,256], P2 +0,146 [+0,044; +0,246], P3 +0,220 [+0,114; +0,329]; `frozen` temas 0,493, plastic 0,654; temasta iyi koku seçme farkı +0,173. Yani seçicilik kazancı üç popülasyonda kararlı (+0,146 / +0,152 / +0,173) ve `frozen` temas oranı 0,41–0,64 arasında değişiyor; P1/P2 ödül ölçütü bu yüzden popülasyona duyarlı (E-15).
+
+**5.2 Plastik topluluk (`PlasticEnsembleBrain`, K=4, τ_valence=0,04; TAHMİN-2 koşudan önce `o5_dev.py` başlığına yazılmıştı: "geç bloklarda ödül oranı ≥ +0,05")**
+
+| ölçü (geç bloklar 11-20, 31-40) | plastic (K=1) | plastic_ens (K=4) | fark `ens − plastic` [%99 GA, eşli, yaşam birimli] |
+|---|---|---|---|
+| ödül oranı | 0,391 | 0,550 | **+0,159 [+0,098; +0,225]** |
+| temas oranı | 0,654 | 0,839 | +0,184 [+0,132; +0,239] |
+| net tercih (P3 ölçüsü) | — | — | +0,224 [+0,103; +0,343] |
+
+Referans 0,77; `frozen` 0,232. İyi koku seçme (5 bölümlük bloklar) K=4: 0,65 0,74 0,75 0,77 | tersine çevirme 0,46 | 0,64 0,75 0,73 (K=1: 0,66 0,72 0,71 0,60 | 0,43 | 0,52 0,67 0,62). Ayrıca ön-kayıtlı kuralla `plastic_ens − frozen`: P1 +0,304, P2 +0,331, P3 +0,444 (betimsel). Önceki, kontrol noktasız ve ham veri tutmayan `o5_dev` koşusu (popülasyon 100, tohum 121, 24 yaşam): ödül 0,39 → 0,45, temas-yok geç bloklarda 0,25–0,32 → 0,12–0,22 — yön tutarlı.
+
+**TAHMİN-2: TUTTU** (tek geliştirme popülasyonunda; geliştirme tohumu). Yorum (sınırlı): kazanç hem yaklaşmadan (+0,18) hem seçicilikten geliyor; tersine çevirme sonrası ilk blokta düşüş (b5 0,46) K=1'deki (0,43) gibi kalıyor, yani hız–gürültü ödünleşiminin tersine çevirme bedeli ayrıca duruyor.
+
+**Sınırlar:** tek popülasyon ve tek geliştirme tohumu; maliyet ≈K× (K=4 → yaklaşık 4×); "daha zeki" değil, daha az gürültülü okuma + kopya ortalamasıyla öğrenme gürültüsü azaltımı (R-9); kopyalar bağımsız öğrenir, ağırlık paylaşımı yok (paylaşılan ağırlıklı tasarım ayrı iş, GPU devri 3b). Doğrulayıcı için yeni ön-kayıt + yeni tohum + ≥4 popülasyon gerekir (§4).
