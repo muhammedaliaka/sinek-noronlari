@@ -53,7 +53,8 @@ class Creature:
         w = self.world
         glom = w.sense()
         taste, touch = w.taste_touch()
-        valence = self.brain.step(glom, taste, touch, learn=learn)
+        vis = w.sense_vis() if hasattr(w, "sense_vis") else None       # yalnız görsel oyun dünyaları (O6); diğerlerinde eski yol
+        valence = self.brain.step(glom, taste, touch, learn=learn) if vis is None else self.brain.step(glom, taste, touch, learn=learn, vis=vis)
         self.last_valence = valence
         w.step(self.motor(valence), self.cfg.motor.speed)
 

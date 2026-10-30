@@ -1,0 +1,17 @@
+{
+ "superclass": "visual_projection",
+ "min_syn": 20,
+ "n_vpn": 47,
+ "n_edges": 684,
+ "n_synapses": 5538,
+ "n_kc_targeted": 166,
+ "n_kc": 2045,
+ "kc_types_targeted": {
+  "KCg-d": 104,
+  "KCab-p": 55,
+  "KCg-m": 4,
+  "KCg-s1": 1,
+  "KCab-s": 1,
+  "KCg-s2": 1
+ }
+}

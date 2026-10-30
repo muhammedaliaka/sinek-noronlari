@@ -52,6 +52,10 @@ class MBData:
     mbon_u: np.ndarray         # (n_mbon,) PPL1 payı - PAM payı
     mbon_types: list
     summary: dict
+    pn_kc_scale: float = 1.0                       # PN->KC ham |sinaps| ortalaması (VPN->KC aynı ölçeğe bölünür)
+    vpn_ids: np.ndarray | None = None              # (n_vpn,) görsel projeksiyon nöronları (vpn_kc.feather yoksa None)
+    vpn_types: list | None = None
+    w_vpn_kc: np.ndarray | None = None             # (n_vpn, n_kc) işaretli, PN ile aynı ölçek
 
     @property
     def n_pn(self) -> int: return self.w_pn_kc.shape[0]
@@ -82,7 +86,8 @@ def from_connectome(c: Connectome) -> MBData:
     w = c.block("PN", "KC", ids["PN"], ids["KC"])
     w = w * _nt_sign(n.loc[ids["PN"], "nt"])[:, None]
     nz = np.abs(w[w != 0])
-    w_pn_kc = (w / nz.mean()).astype(np.float32)
+    pn_kc_scale = float(nz.mean())
+    w_pn_kc = (w / pn_kc_scale).astype(np.float32)
 
     # KC <-> APL (tek APL); ortalama 1
     apl = c.ids("APL")
@@ -117,8 +122,26 @@ def from_connectome(c: Connectome) -> MBData:
     return MBData(
         ids=ids, glom_names=glom_names, pn_glom=pn_glom, w_pn_kc=w_pn_kc, kc_apl=kc_apl, apl_kc=apl_kc,
         kc_mbon=kc_mbon, dan_mbon=dan_mbon, dan_is_ppl=dan_is_ppl, mbon_u=mbon_u,
-        mbon_types=n.loc[ids["MBON"], "type"].astype(str).tolist(), summary=summary,
+        mbon_types=n.loc[ids["MBON"], "type"].astype(str).tolist(), summary=summary, pn_kc_scale=pn_kc_scale,
     )
+
+
+def _attach_vpn(d: MBData, directory: Path) -> MBData:
+    """O6 görsel ön ucu: `python -m sinek.connectome.vpn` çıktısı varsa VPN->KC sinapslarını ekler (yoksa alanlar None kalır; koku yolu etkilenmez)."""
+    pn, pe = directory / "vpn_neurons.feather", directory / "vpn_kc.feather"
+    if not (pn.exists() and pe.exists()):
+        return d
+    import pandas as pd
+
+    vn, ve = pd.read_feather(pn), pd.read_feather(pe)
+    vi = {b: i for i, b in enumerate(vn["bodyId"].to_numpy())}
+    ki = {b: i for i, b in enumerate(d.ids["KC"].tolist())}
+    w = np.zeros((len(vn), d.n_kc), np.float32)
+    for pre, post, wt in zip(ve["body_pre"].to_numpy(), ve["body_post"].to_numpy(), ve["weight"].to_numpy()):
+        w[vi[pre], ki[post]] = wt
+    w = w * _nt_sign(vn["nt"])[:, None] / np.float32(d.pn_kc_scale)
+    d.vpn_ids, d.vpn_types, d.w_vpn_kc = vn["bodyId"].to_numpy(), vn["type"].astype(str).tolist(), w
+    return d
 
 
 _CACHE: dict = {}
@@ -127,7 +150,7 @@ _CACHE: dict = {}
 def load(data_dir: str | Path = DEFAULT_DIR) -> MBData:
     key = str(resolve_dir(data_dir))
     if key not in _CACHE:
-        _CACHE[key] = from_connectome(Connectome.load(key))
+        _CACHE[key] = _attach_vpn(from_connectome(Connectome.load(key)), Path(key))
     return _CACHE[key]
 
 

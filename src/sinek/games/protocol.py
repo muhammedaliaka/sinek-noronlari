@@ -28,6 +28,7 @@ class Arm:
     gain: float | None         # None: yapılandırmadaki dönüş kazancı; 0: yönelimsiz
     anosmic: bool = False
     brain: str = "trained"     # trained | naive | reference
+    blind: bool = False        # O6: görsel girdi sıfır (VPN lezyonu eşdeğeri; beyin/RNG aynı → CRN korunur)
 
 
 ARMS: dict[str, Arm] = {
@@ -38,6 +39,8 @@ ARMS: dict[str, Arm] = {
     "reference": Arm(0.0, None, brain="reference"),
     "naive": Arm(0.0, None, brain="naive"),
     "naive_plastic": Arm(1.0, None, brain="naive"),
+    "naive_plastic_blind": Arm(1.0, None, brain="naive", blind=True),
+    "naive_blind": Arm(0.0, None, brain="naive", blind=True),
 }
 
 
@@ -61,9 +64,11 @@ O3_ARMS = {"A": (True, True), "B": (True, False), "C": (False, True), "D": (Fals
 
 
 def make_game_creature(pre: Creature, game: str | GameSpec, arm: str, agents: Sequence[int], trials: int, seed: int,
-                       spec: GameSpec | None = None, o3: str | None = None, reward_target: float | None = None) -> Creature:
+                       spec: GameSpec | None = None, o3: str | None = None, reward_target: float | None = None,
+                       vis_feat: int = 0) -> Creature:
     """Ön-eğitimli canlılardan (her biri `trials` kez kopyalanır) oyun koşusu kurar. Eleman = canlı·trials + deneme.
 
+    `vis_feat` > 0 (O6): görsel ön uç açık (yalnız `naive` beyinler; cbrain.n_vis_feat = vis_feat, dünyada görsel kanal açık).
     `reward_target`: yalnız GELİŞTİRME (K-048): bu canlıların DAN hedefi (ödülün V karşılığı); None = yapılandırmadaki değer (0,6). Başka canlılar/ön-eğitim etkilenmez.
 
     `trials` çift olmalı: ardışık deneme çiftleri aynı yerleşimin ayna çiftidir.
@@ -72,9 +77,13 @@ def make_game_creature(pre: Creature, game: str | GameSpec, arm: str, agents: Se
     sp = spec or (GAMES[game] if isinstance(game, str) else game)
     idx = torch.as_tensor(list(agents), dtype=torch.long).repeat_interleave(trials)
     B, cfg, dev = len(idx), pre.cfg, str(pre.world.device)
+    if vis_feat > 0:
+        if a.brain != "naive":
+            raise ValueError("görsel ön uç şimdilik yalnız 'naive' beyinlerle (ön-eğitimli beyin görsel ön uçsuz kuruldu)")
+        cfg = dataclasses.replace(cfg, cbrain=dataclasses.replace(cfg.cbrain, n_vis_feat=vis_feat))
     if trials % 2:
         raise ValueError("trials çift olmalı (ayna çiftleri)")
-    world = GameWorld(cfg.world, sp, B, seed, dev, patterns=pre.world.patterns, swap=pre.world.swap[idx.to(pre.world.swap.device)])
+    world = GameWorld(cfg.world, sp, B, seed, dev, patterns=pre.world.patterns, swap=pre.world.swap[idx.to(pre.world.swap.device)], n_vis=vis_feat)
     if a.brain == "trained":
         brain = pre.brain.select(idx)
     elif a.brain == "naive":
@@ -88,6 +97,8 @@ def make_game_creature(pre: Creature, game: str | GameSpec, arm: str, agents: Se
             brain.cfg = dataclasses.replace(brain.cfg, reward_target=float(reward_target))
     creature.turn_gain = torch.full((B,), cfg.motor.turn_gain if a.gain is None else a.gain, device=world.device)
     world.set_anosmic(torch.full((B,), a.anosmic))
+    if a.blind:
+        world.set_blind(torch.ones(B, dtype=torch.bool))
     if o3 is not None:
         r_on, o_on = O3_ARMS[o3]
         world.set_arms(torch.full((B,), r_on), torch.full((B,), o_on))
@@ -167,8 +178,10 @@ def snapshot(creature: Creature, seed: int, game: str | GameSpec | None = None, 
     if reps % 2 and reps != 1:
         raise ValueError("reps çift olmalı (ayna çiftleri)")
     idx = torch.arange(w.B).repeat_interleave(reps)
-    world = GameWorld(w.cfg, sp, w.B * reps, seed, str(w.device), patterns=w.patterns, swap=w.swap[idx.to(w.swap.device)])
+    world = GameWorld(w.cfg, sp, w.B * reps, seed, str(w.device), patterns=w.patterns, swap=w.swap[idx.to(w.swap.device)],
+                      n_vis=w.n_vis, vis_swap=w.vis_swap[idx.to(w.vis_swap.device)])
     world.set_anosmic(w.anosmic[idx.to(w.anosmic.device)])
+    world.set_blind(w.blind[idx.to(w.blind.device)])
     brain = creature.brain.select(idx) if hasattr(creature.brain, "select") else creature.brain
     if hasattr(brain, "eta_scale"):
         brain.eta_scale = torch.zeros_like(brain.eta_scale)

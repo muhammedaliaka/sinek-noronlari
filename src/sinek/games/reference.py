@@ -18,7 +18,7 @@ class ReferenceBrain:
     def reset_state(self) -> None:
         pass
 
-    def step(self, glom: torch.Tensor, taste: torch.Tensor, touch: torch.Tensor, learn: bool = True) -> torch.Tensor:
+    def step(self, glom: torch.Tensor, taste: torch.Tensor, touch: torch.Tensor, learn: bool = True, vis=None) -> torch.Tensor:
         mask = self.world.reward_mask().unsqueeze(1)                   # (B,1,G)
         return self.gain * (glom * mask).sum(-1)                       # (B,2)
 
@@ -30,5 +30,5 @@ class NullBrain:
     def reset_state(self) -> None:
         pass
 
-    def step(self, glom, taste, touch, learn: bool = True) -> torch.Tensor:
+    def step(self, glom, taste, touch, learn: bool = True, vis=None) -> torch.Tensor:
         return torch.zeros(self.B, 2, device=self.device)

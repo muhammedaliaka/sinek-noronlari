@@ -17,6 +17,7 @@ class SlotSpec:
     width: float = 4.0           # trail yanal yarı genişlik
     lam: float = 12.0            # trail boylamsal uzunluk ölçeği
     contact_level: float = 0.0   # temasa-bağlı koku düzeyi (tüketim süresince, her iki antene); 0 = yok
+    visual: str = "none"         # O6: none | X | Y (kaynağın sabit görsel deseni; canlıya göre rol dengelemesi `vis_swap` ile). reward < 0: ısı cezası (acı kanalı)
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,7 @@ class GameSpec:
     start_margin: float = 3.0
     src_margin: float = 6.0
     bandit: bool = False         # O5: temasta olasılıklı ödül (dünyadaki reward_p), herhangi bir kaynağın tüketimi bölümü bitirir
+    end_any: bool = False        # O6: herhangi bir kaynağın (ödül ya da ısı tuzağı) tüketimi bölümü bitirir
 
     def slots(self):
         return (self.target, self.decoy)
@@ -57,6 +59,14 @@ GAMES: dict[str, GameSpec] = {
     # O4c: decoy + kokusuz gerçek hedef
     "O4c": GameSpec("O4c", target=SlotSpec(profile="none", odor="none"), decoy=replace(_DECOY, active=True)),
     # O5 (geliştirme): iki kaynak, kokular A (yuva 0) ve B (yuva 1); ödül olasılıkları bölümden bölüme `GameWorld.reward_p` ile değişir
+    # O6 (görsel + koku, ısı tuzağı; docs/gorsel_koku_oyunu_plani.md): yuva 0 = güvenli (ödül +1), yuva 1 = ısı tuzağı (−1); herhangi bir temas bölümü bitirir.
+    # O6a: yalnız koku (güvenli=A, tuzak=B, görsel yok). O6b: iki yuvada AYNI koku, güvenli=desen X, tuzak=desen Y. O6c: kokusuz güvenli(X) vs ödüllü kokuyu ×2 yayan tuzak(Y).
+    "O6a": GameSpec("O6a", target=SlotSpec(profile="gauss", odor="A", sigma=8.0, reward=1.0),
+                    decoy=SlotSpec(active=True, profile="gauss", odor="B", sigma=8.0, reward=-1.0), end_any=True),
+    "O6b": GameSpec("O6b", target=SlotSpec(profile="gauss", odor="A", sigma=8.0, reward=1.0, visual="X"),
+                    decoy=SlotSpec(active=True, profile="gauss", odor="A", sigma=8.0, reward=-1.0, visual="Y"), end_any=True),
+    "O6c": GameSpec("O6c", target=SlotSpec(profile="none", odor="none", reward=1.0, visual="X"),
+                    decoy=SlotSpec(active=True, profile="gauss", odor="A", sigma=8.0, amp=2.0, reward=-1.0, visual="Y"), end_any=True),
     "O5": GameSpec("O5", target=SlotSpec(profile="gauss", odor="A", sigma=8.0), decoy=SlotSpec(active=True, profile="gauss", odor="B", sigma=8.0, reward=1.0),
                    bandit=True),
 }

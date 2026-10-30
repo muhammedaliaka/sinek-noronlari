@@ -40,9 +40,10 @@ class EnsembleBrain:
         self.inner.reset_state()
 
     @torch.no_grad()
-    def step(self, glom, taste, touch, learn: bool = False):
+    def step(self, glom, taste, touch, learn: bool = False, vis=None):
         k = self.k
-        v = self.inner.step(glom.repeat_interleave(k, 0), taste.repeat_interleave(k, 0), touch.repeat_interleave(k, 0), learn=False)
+        kw = {} if vis is None else {"vis": vis.repeat_interleave(k, 0)}
+        v = self.inner.step(glom.repeat_interleave(k, 0), taste.repeat_interleave(k, 0), touch.repeat_interleave(k, 0), learn=False, **kw)
         return v.view(self.B, k, -1).mean(1)
 
 
@@ -68,7 +69,8 @@ class PlasticEnsembleBrain(EnsembleBrain):
         self.inner.eta_scale = v.repeat_interleave(self.k).clone()
 
     @torch.no_grad()
-    def step(self, glom, taste, touch, learn: bool = False):
+    def step(self, glom, taste, touch, learn: bool = False, vis=None):
         k = self.k
-        v = self.inner.step(glom.repeat_interleave(k, 0), taste.repeat_interleave(k, 0), touch.repeat_interleave(k, 0), learn=learn)
+        kw = {} if vis is None else {"vis": vis.repeat_interleave(k, 0)}
+        v = self.inner.step(glom.repeat_interleave(k, 0), taste.repeat_interleave(k, 0), touch.repeat_interleave(k, 0), learn=learn, **kw)
         return v.view(self.B, k, -1).mean(1)

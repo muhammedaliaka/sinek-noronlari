@@ -8,6 +8,8 @@ Nedensel sıra (Creature.step): sense → beyin → hareket → temas; temasın 
 """
 from __future__ import annotations
 
+import math
+
 import torch
 
 from ..config import WorldConfig
@@ -18,11 +20,28 @@ from .spec import GameSpec
 
 REARM_MARGIN = 1.0   # temastan sonra kaynak, canlı temas yarıçapı+bu kadar uzaklaşınca yeniden etkinleşir
 
+# O6 görsel ön uç (ELLE YAZILMIŞ sabitler, R-11; pilotta kuram kontrolüyle ayarlanır): göz ekseni ±45°, açısal pencere, uzaklığa bağlı görünürlük
+EYE_AXIS = math.pi / 4
+EYE_SIGMA = 0.9          # rad
+VIS_D0 = 12.0            # görünürlük yarıya düşen uzaklık ölçeği (arena kenarı 40; koku σ=8'den uzun menzil)
+
+
+def vis_patterns(n_feat: int, seed: int = 0) -> torch.Tensor:
+    """İki sabit görsel desen X, Y: (2, n_feat) [0,1]; özellik kümeleri çakışmaz (keyfî ama sabit; keyfî-kod ilkesi koku desenleriyle aynı)."""
+    g = torch.Generator().manual_seed(7_000 + seed)
+    perm = torch.randperm(n_feat, generator=g)
+    out = torch.zeros(2, n_feat)
+    half = n_feat // 2
+    out[0, perm[:half]] = 0.6 + 0.4 * torch.rand(half, generator=g)
+    out[1, perm[half:half * 2]] = 0.6 + 0.4 * torch.rand(half, generator=g)
+    return out
+
 
 class GameWorld(World):
     def __init__(self, cfg: WorldConfig, spec: GameSpec, batch: int, seed: int, device: str = "cpu",
-                 patterns: torch.Tensor | None = None, swap: torch.Tensor | None = None):
-        """`swap`: eleman başına rol dengelemesi (True: ödüllü koku = koku 1); ilk yerleşimden önce uygulanır."""
+                 patterns: torch.Tensor | None = None, swap: torch.Tensor | None = None, n_vis: int = 0, vis_swap: torch.Tensor | None = None):
+        """`swap`: eleman başına rol dengelemesi (True: ödüllü koku = koku 1); ilk yerleşimden önce uygulanır.
+        `n_vis` > 0: görsel kanal açık (O6); `vis_swap`: görsel rol dengelemesi (True: X↔Y); verilmezse `swap` kullanılır."""
         if batch % 2:
             raise ValueError("ayna çiftleri için batch çift olmalı")
         super().__init__(cfg, batch, seed, device, patterns)
@@ -39,6 +58,10 @@ class GameWorld(World):
         z = torch.zeros(1, cfg.n_glom, device=self.device)
         self.pattern_ext = torch.cat([self.patterns, z])             # son satır: kokusuz (−1 dizini)
         self.anosmic = torch.zeros(batch, dtype=torch.bool, device=self.device)
+        self.n_vis = n_vis
+        self.vis_pat = vis_patterns(n_vis).to(self.device) if n_vis > 0 else None
+        self.vis_swap = (self.swap if vis_swap is None else torch.as_tensor(vis_swap, dtype=torch.bool, device=self.device)).clone()
+        self.blind = torch.zeros(batch, dtype=torch.bool, device=self.device)
         self.arm_reward = torch.ones(batch, dtype=torch.bool, device=self.device)
         self.arm_odor = torch.ones(batch, dtype=torch.bool, device=self.device)
         self.test_mode = True
@@ -53,6 +76,13 @@ class GameWorld(World):
     def reward_mask(self) -> torch.Tensor:
         """(B, n_glom) ödüllü kokunun glomerül maskesi (yalnız referans karşılaştırıcı kullanır)."""
         return self.patterns[self.odor_rewarded()]
+
+    def set_blind(self, mask) -> None:
+        """Görsel kapalı kol (VPN girdisi sıfır; beyin ve RNG tüketimi aynı kalır → CRN bozulmaz)."""
+        self.blind = torch.as_tensor(mask, dtype=torch.bool, device=self.device).clone()
+
+    def set_vis_swap(self, mask) -> None:
+        self.vis_swap = torch.as_tensor(mask, dtype=torch.bool, device=self.device).clone()
 
     def set_anosmic(self, mask) -> None:
         self.anosmic = torch.as_tensor(mask, dtype=torch.bool, device=self.device).clone()
@@ -88,6 +118,12 @@ class GameWorld(World):
                 odor[:, k] = 0 if s.odor == "A" else 1
         self.src_odor = odor                                           # (B,2) −1 = kokusuz
         self.src_reward = torch.tensor([[s.reward for s in sp.slots()]], device=dev).expand(B, -1).clone()
+        vis = torch.full((B, 2), -1, dtype=torch.long, device=dev)           # (B,2) görsel desen dizini; −1 = görünmez
+        for k, s_ in enumerate(sp.slots()):
+            if s_.active and s_.visual in ("X", "Y"):
+                base = 0 if s_.visual == "X" else 1
+                vis[:, k] = torch.where(self.vis_swap, torch.full_like(vis[:, k], 1 - base), torch.full_like(vis[:, k], base))
+        self.src_vis = vis
         self.armed = torch.ones(B, 2, dtype=torch.bool, device=dev)
         self.contact_count = torch.zeros(B, 2, dtype=torch.long, device=dev)
         self.first_contact_slot = torch.full((B,), -1, dtype=torch.long, device=dev)
@@ -129,6 +165,21 @@ class GameWorld(World):
         glom = 1.0 - torch.exp(-c.odor_gain * drive)
         return torch.where(self.anosmic.view(-1, 1, 1), torch.zeros_like(glom), glom)
 
+    def sense_vis(self) -> torch.Tensor | None:
+        """(B,2 göz,n_vis) [0,1]: göz başına görsel özellik etkinliği (sol göz = sol anten tarafı). Görsel kanal kapalıysa ya da oyunda görsel kaynak yoksa None
+        (eski oyunlarda `Creature.step` eski yola düşer). Kör elemanda sıfır. Bilgi sınırı: yalnız kaynağın görünen deseni; ödül/ısı bilgisi YOK."""
+        if self.n_vis == 0 or not any(s.active and s.visual != "none" for s in self.spec.slots()):
+            return None
+        rel = self.src_pos - self.pos.unsqueeze(1)                                      # (B,S,2)
+        d = rel.norm(dim=-1)                                                            # (B,S)
+        bearing = torch.atan2(rel[..., 1], rel[..., 0]) - self.heading.unsqueeze(1)     # (B,S) başın önüne göre
+        axes = torch.tensor([EYE_AXIS, -EYE_AXIS], device=self.device)                  # sol, sağ
+        dlt = torch.remainder(bearing.unsqueeze(1) - axes.view(1, 2, 1) + math.pi, 2 * math.pi) - math.pi     # (B,2,S)
+        gain = (torch.exp(-dlt ** 2 / (2 * EYE_SIGMA ** 2)) / (1.0 + (d / VIS_D0) ** 2).unsqueeze(1)) * self.src_active.unsqueeze(1).float()
+        pat = self.vis_pat[self.src_vis.clamp(min=0)] * (self.src_vis >= 0).unsqueeze(-1).float()       # (B,S,F)
+        out = torch.einsum("bes,bsf->bef", gain, pat).clamp(max=1.0)
+        return torch.where(self.blind.view(-1, 1, 1), torch.zeros_like(out), out)
+
     # ------------------------------------------------------------------- adım
     def step(self, turn_rate: torch.Tensor, speed: float) -> None:
         before, alive = self.pos.clone(), ~self.done
@@ -168,7 +219,7 @@ class GameWorld(World):
         self.contact_level_b[rows] = torch.where(on, lvl, torch.zeros_like(lvl))
         pat = self.pattern_ext[torch.where(odor < 0, torch.full_like(odor, self.pattern_ext.shape[0] - 1), odor)]
         self.contact_pat[rows] = pat
-        self.finish_pending[rows] |= (slot >= 0) if self.spec.bandit else (slot == 0)   # gerçek hedef (bandit: herhangi bir kaynak) tüketilince deneme biter
+        self.finish_pending[rows] |= (slot >= 0) if (self.spec.bandit or self.spec.end_any) else (slot == 0)   # gerçek hedef (bandit/end_any: herhangi bir kaynak) tüketilince deneme biter
 
     # ----------------------------------------------------------------- çıktılar
     def outcome(self) -> dict[str, torch.Tensor]:

@@ -88,6 +88,13 @@ class ConnectomeBrainConfig:
     pn_base_rate: float = 3.0
     pn_max_rate: float = 120.0
 
+    # görsel ön uç (O6, docs/gorsel_koku_oyunu_plani.md §3). n_vis_feat=0: KAPALI → koku yolu bit-bit aynı kalır.
+    # VPN->KC sinaps sayıları veriden (vpn_kc.feather), PN ile AYNI ölçekle ve j_pn_kc ile; VPN ayarı (özellik->VPN) elle yazılmış, sabit-rastgeledir (R-11).
+    n_vis_feat: int = 0
+    vis_gain: float = 4.0            # özellik etkinliğinden VPN etkinliğine doygunluk (odor_gain gibi)
+    vis_tuning_seed: int = 0         # ayar matrisinin tohumu (popülasyon sabiti; canlı tohumundan bağımsız)
+    vis_tuning_density: float = 0.4  # VPN başına özellik kanalına bağlanma olasılığı
+
     # Kenyon hücreleri ve APL (gerçek PN->KC, KC->APL, APL->KC sinaps sayılarıyla)
     tau_kc_ms: float = 10.0
     j_pn_kc: float = 0.25            # ortalama PN->KC bağlantısı için sıçrama (sinaps sayısı ortalamaya bölünür)

@@ -31,6 +31,15 @@ from .connectome.mbmodel import MBData
 H = 2  # yarımküre sayısı (sol, sağ)
 
 
+def vis_tuning(n_vpn: int, n_feat: int, seed: int, density: float) -> np.ndarray:
+    """VPN ayar matrisi (n_vpn, n_feat): sabit-rastgele, seyrek, ≥1 özellik/VPN. ELLE YAZILMIŞ (veri değil; R-11). Popülasyon sabiti (canlı tohumundan bağımsız)."""
+    rng = np.random.default_rng(10_000 + seed)
+    m = (rng.random((n_vpn, n_feat)) < density) * rng.uniform(0.5, 1.0, (n_vpn, n_feat))
+    for i in np.flatnonzero(m.sum(1) == 0):
+        m[i, rng.integers(n_feat)] = rng.uniform(0.5, 1.0)
+    return m.astype(np.float32)
+
+
 class ConnectomeBrain:
     def __init__(
         self,
@@ -56,6 +65,14 @@ class ConnectomeBrain:
         self.w_pn_kc = t(d.w_pn_kc) * cfg.j_pn_kc                  # (n_pn, n_kc)
         self.kc_apl = t(d.kc_apl) / d.n_kc                         # APL girdisi = ağırlıklı KC oranı
         self.apl_kc = t(d.apl_kc)                                  # (n_kc,)
+
+        self.n_vis = cfg.n_vis_feat                                # görsel ön uç (O6); 0 = kapalı, koku yolu bit-bit aynı
+        if self.n_vis > 0:
+            if d.w_vpn_kc is None:
+                raise ValueError("görsel ön uç için vpn_kc.feather gerekli: python3 -I -m sinek.connectome.vpn")
+            self.n_vpn = d.w_vpn_kc.shape[0]
+            self.w_vpn_kc = t(d.w_vpn_kc) * cfg.j_pn_kc            # (n_vpn, n_kc) PN ile aynı ölçek
+            self.vis_tuning = t(vis_tuning(self.n_vpn, self.n_vis, cfg.vis_tuning_seed, cfg.vis_tuning_density))   # (n_vpn, n_vis)
 
         C = d.kc_mbon
         if cfg.kc_mbon_norm == "mbon":
@@ -105,11 +122,18 @@ class ConnectomeBrain:
         taste: torch.Tensor,     # (B,)  +tatlı / -acı
         touch: torch.Tensor,     # (B,)  0/1
         learn: bool = True,
+        vis: torch.Tensor | None = None,   # (B, 2, n_vis) [0,1] göz başına görsel özellik etkinliği (O6); None = görsel girdi yok (eski yol bit-bit aynı)
     ) -> torch.Tensor:
         """Bir dünya adımı kadar ağı çalıştırır, (B, 2) değer (valence) döndürür."""
         c, R, dt_s, dev = self.cfg, self.R, self.dt_s, self.device
         n_sub = self.substeps
         pn_p = (c.pn_base_rate + c.pn_max_rate * glom.reshape(R, self.n_glom)[:, self.pn_glom]) * dt_s
+        vpn_p = None
+        if vis is not None:
+            if self.n_vis == 0:
+                raise ValueError("beyin görsel ön uç olmadan kuruldu (cfg.cbrain.n_vis_feat=0) ama vis verildi")
+            act = 1.0 - torch.exp(-c.vis_gain * (vis.reshape(R, self.n_vis) @ self.vis_tuning.T))      # (R, n_vpn) [0,1)
+            vpn_p = (c.pn_base_rate + c.pn_max_rate * act) * dt_s
         grn_p = torch.stack(
             [taste.clamp(min=0), (-taste).clamp(min=0), touch], dim=-1
         ) * c.grn_max_rate * dt_s                                              # (B, 3)
@@ -120,7 +144,10 @@ class ConnectomeBrain:
         cnt_grn = torch.zeros(self.B, 3, device=dev)
         for k in range(n_sub):
             pn = (rand(R, self.n_pn) < pn_p).float()
-            self.v_kc = (self.v_kc * self.a_kc + pn @ self.w_pn_kc
+            drive_kc = pn @ self.w_pn_kc
+            if vpn_p is not None:
+                drive_kc = drive_kc + (rand(R, self.n_vpn) < vpn_p).float() @ self.w_vpn_kc
+            self.v_kc = (self.v_kc * self.a_kc + drive_kc
                          - c.apl_gain * self.apl.unsqueeze(1) * self.apl_kc)
             spk = self.v_kc >= c.kc_thresh
             self.v_kc = torch.where(spk, torch.zeros_like(self.v_kc), self.v_kc).clamp_(min=-1.0)
