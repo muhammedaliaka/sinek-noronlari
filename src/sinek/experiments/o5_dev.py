@@ -13,6 +13,11 @@ yani öğrenme oranı için gerçek bir hız–gürültü ödünleşimi görülm
 TAHMİN-2 (2026-10-29, plastik topluluk için, koşudan önce): `naive_plastic@1/k4/t0.04`, `naive_plastic@1`'e göre geç bloklarda (11-20, 31-40) ödül oranını ≥ +0,05 artırır
 (K-038: O1a'da test-zamanı topluluk +0,26…+0,32; O5'te yaklaşma ve seçim aynı okuma gürültüsünden etkileniyor). Tersine çevirme sonrası ilk blok (b5) düşüşü değişmez ya da küçülür.
 Tutmazsa: darboğaz okuma gürültüsü değil (öğrenme gürültüsü / elle yazılmış δ kuralı / yaklaşma), belgede "yanlış çıktı" yazılır ve plastik topluluk önceliği düşer.
+
+TAHMİN-3 (2026-10-30, öğrenme hızı η ölçeği taraması, koşudan önce; O5b sonrası: topluluk seçiciliği artırmadı, seçicilik farkı +0,007…+0,058): soyut öğrenicide en iyi α yüksek (0,3–0,5;
+`kuram_iki_zaman`), yani beyin etkin α'sı düşükse ölçek 2 seçiciliği artırmalıydı. AMA geliştirme verisi (tohum 120): ölçek 0,3 ile 1 geç blok seçiciliği ayırt edilemez (0,61–0,68 vs 0,63–0,68).
+Bu veriden tahminim "duyarsızlık": naive_plastic@2 geç blok seçiciliği (b3,b4,b7,b8 ortalaması) @1'den en çok ±0,05 farklı; @4 en fazla @1 kadar iyi (temas kaybı/gürültü ile bozulma ≥0,03 olabilir).
+Tutarsa: ölçek kaldıraç değildir; sınır elle yazılmış δ kuralı / ağırlık sınırları / değer okuması yapısındadır → sıradaki iş DAN yolu (sönüm, PPL1). Tutmazsa (|Δ| >0,05): hız ödünleşimi gerçek, η × K ızgarasına geçilir.
 """
 from __future__ import annotations
 
