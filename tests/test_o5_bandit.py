@@ -45,3 +45,17 @@ def test_o5_dev_arm_parsing():
     assert parse_arm("naive_plastic@0.3/k4/t0.04") == ("naive_plastic", 0.3, 4, 0.04, None)
     assert parse_arm("naive_plastic@1/r1.5") == ("naive_plastic", 1.0, 1, None, 1.5)
     assert parse_arm("naive") == ("naive", None, 1, None, None)
+
+
+def test_reward_target_is_per_creature_and_default_unchanged(cfg):
+    """K-048: `reward_target` yalnız o canlıların DAN hedefini değiştirir; ön-eğitim, öteki canlılar ve varsayılan yol etkilenmez."""
+    pre = _pre(cfg)
+    base = pre.brain.cfg.reward_target
+    c0 = make_game_creature(pre, "O5", "naive_plastic", [0, 1], 2, 150)
+    c1 = make_game_creature(pre, "O5", "naive_plastic", [0, 1], 2, 150, reward_target=2.5)
+    c2 = make_game_creature(pre, "O5", "plastic", [0, 1], 2, 150, reward_target=1.5)
+    assert c0.brain.cfg.reward_target == base == pre.brain.cfg.reward_target
+    assert c1.brain.cfg.reward_target == 2.5 and c2.brain.cfg.reward_target == 1.5
+    assert make_game_creature(pre, "O5", "naive_plastic", [0, 1], 2, 150).brain.cfg.reward_target == base      # sonraki canlı etkilenmedi
+    assert c0.brain.cfg is not c1.brain.cfg
+    make_game_creature(pre, "O5", "reference", [0, 1], 2, 150, reward_target=2.5)                                 # referans beyin: yok sayılır, hata vermez

@@ -75,7 +75,7 @@ def run_o3(pre, seed: int, agents: int, copies: int, trials: int, seconds: float
 
 
 def run_o4(pre, game: str, seed: int, agents: int, copies: int, trials: int, seconds: float, test_reps: int, snap_eps=(3, 6),
-           verbose=True, part_dir=None, key: str = "") -> dict:
+           verbose=True, part_dir=None, key: str = "", reward_target: float | None = None) -> dict:
     ids = list(range(min(agents, pre.world.B)))
     out, t0 = {}, time.time()
     for arm in ("plastic", "frozen", "anosmic"):
@@ -85,7 +85,7 @@ def run_o4(pre, game: str, seed: int, agents: int, copies: int, trials: int, sec
             if verbose:
                 print(f"[{time.time() - t0:6.0f}s] {game} {arm:<8} kontrol noktasından okundu", flush=True)
             continue
-        c = make_game_creature(pre, game, arm, ids, copies, seed)
+        c = make_game_creature(pre, game, arm, ids, copies, seed, reward_target=reward_target)
         learn = ARMS[arm].eta > 0
         snaps = {}
         for ep in range(trials + 1):
@@ -160,6 +160,7 @@ def main(argv=None) -> dict:
     ap.add_argument("--attract-mult", type=float, default=1.0)
     ap.add_argument("--boot", type=int, default=10000)
     ap.add_argument("--pilot", action="store_true")
+    ap.add_argument("--reward-target", type=float, default=None, help="yalnız --pilot ve O4a/O4c: DAN hedefi (varsayılan: yapılandırma 0,6); K-048 gerileme kontrolü")
     ap.add_argument("--threads", type=int, default=None)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
@@ -167,6 +168,8 @@ def main(argv=None) -> dict:
         raise SystemExit("--pilot yalnız geliştirme tohumlarıyla (<200)")
     if a.seed < 200 and not a.pilot:
         raise SystemExit("200 altı tohum doğrulayıcı olamaz: --pilot ekleyin (R-2)")
+    if a.reward_target is not None and (not a.pilot or a.game == "O3"):
+        raise SystemExit("--reward-target yalnız --pilot ile ve O4a/O4c için (doğrulayıcı koşular yapılandırma değerini kullanır)")
     if a.threads:
         torch.set_num_threads(a.threads)
     copies = a.copies if a.copies is not None else (4 if a.game == "O3" else 2)
@@ -179,9 +182,10 @@ def main(argv=None) -> dict:
     part_dir = out / "partial"
     part_dir.mkdir(exist_ok=True)
     key = json.dumps({"game": a.game, "seed": a.seed, "agents": a.agents, "copies": copies, "trials": trials, "seconds": a.seconds,
-                      "test_reps": a.test_reps, "pre_sha": _sha(a.pre)}, sort_keys=True)
+                      "test_reps": a.test_reps, "pre_sha": _sha(a.pre),
+                      **({"reward_target": a.reward_target} if a.reward_target is not None else {})}, sort_keys=True)
     run = run_o3(pre, a.seed, a.agents, copies, trials, a.seconds, part_dir=part_dir, key=key) if a.game == "O3" else \
-        run_o4(pre, a.game, a.seed, a.agents, copies, trials, a.seconds, a.test_reps, part_dir=part_dir, key=key)
+        run_o4(pre, a.game, a.seed, a.agents, copies, trials, a.seconds, a.test_reps, part_dir=part_dir, key=key, reward_target=a.reward_target)
     ev = evaluate(a.game, run, trials, thr)
     meta = {"stamp": "**PİLOT — kanıt değildir.**" if a.pilot else "Doğrulayıcı koşu.", "pre": a.pre, "pre_sha": _sha(a.pre), "git": _git_head()}
     text = report(a.game, a.seed, ev, run, trials, thr, meta)

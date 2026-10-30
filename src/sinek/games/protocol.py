@@ -6,6 +6,7 @@ koku-açık ve anosmik kolların sonuçları bit-bit aynı olmak zorundadır (`l
 """
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 from typing import Sequence
 
@@ -60,8 +61,10 @@ O3_ARMS = {"A": (True, True), "B": (True, False), "C": (False, True), "D": (Fals
 
 
 def make_game_creature(pre: Creature, game: str | GameSpec, arm: str, agents: Sequence[int], trials: int, seed: int,
-                       spec: GameSpec | None = None, o3: str | None = None) -> Creature:
+                       spec: GameSpec | None = None, o3: str | None = None, reward_target: float | None = None) -> Creature:
     """Ön-eğitimli canlılardan (her biri `trials` kez kopyalanır) oyun koşusu kurar. Eleman = canlı·trials + deneme.
+
+    `reward_target`: yalnız GELİŞTİRME (K-048): bu canlıların DAN hedefi (ödülün V karşılığı); None = yapılandırmadaki değer (0,6). Başka canlılar/ön-eğitim etkilenmez.
 
     `trials` çift olmalı: ardışık deneme çiftleri aynı yerleşimin ayna çiftidir.
     """
@@ -81,6 +84,8 @@ def make_game_creature(pre: Creature, game: str | GameSpec, arm: str, agents: Se
     creature = Creature(cfg, brain, world)
     if a.brain != "reference":
         brain.eta_scale = torch.full((B,), a.eta, device=world.device)
+        if reward_target is not None:
+            brain.cfg = dataclasses.replace(brain.cfg, reward_target=float(reward_target))
     creature.turn_gain = torch.full((B,), cfg.motor.turn_gain if a.gain is None else a.gain, device=world.device)
     world.set_anosmic(torch.full((B,), a.anosmic))
     if o3 is not None:
