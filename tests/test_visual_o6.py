@@ -111,3 +111,11 @@ def test_make_game_creature_with_vision_runs_and_blind_arm_has_no_visual_input(c
     assert out["slot"].shape[0] == 4
     with pytest.raises(ValueError):
         make_game_creature(pre, "O6b", "plastic", [0, 1], 2, 150, vis_feat=6)         # ön-eğitimli beyin görsel ön uçsuz kuruldu
+
+
+def test_o6_dev_block_table_and_net_preference():
+    from sinek.experiments.o6_dev import block_table
+    slot = np.array([[0, 0, 1, -1], [0, 1, 1, -1], [0, 0, 0, 0], [1, 1, 1, 1]])      # (bölüm, eleman)
+    t = block_table(slot, 2)
+    assert t[0] == (3 / 8, 3 / 8, 2 / 8, 0.0) and t[1] == (4 / 8, 4 / 8, 0.0, 0.0)
+    assert block_table(np.full((4, 3), -1), 4)[0][3] == 0.0                          # hiç temas yok → NP 0 (yaklaşmadan bağımsız sıfır düzeyi)
