@@ -34,12 +34,21 @@ Tek yönlü monoton doz–yanıt: T büyüdükçe seçicilik artıyor, temas-yok
 
 **TAHMİN-5 değerlendirmesi:** (a) T=2,5 − T=0,6: ödül +0,07 (eşik ≥ +0,05 ✔), seçicilik +0,036 (eşik ≥ +0,03 ✔), temas-yok −0,10 ✔ → **bulgu farklı popülasyonda yinelendi**. (b) T=4 ≈ T=2,5 (ödül farkı 0,00 ≤ 0,03 ✔; seçicilik +0,009; "hafif bozulma" seçeneği gerçekleşmedi) → **plato** T≈2,5. "Temas artmaya devam eder" tahminim kısmen yanlış: temas-yok 0,182 → 0,180 (düz). Betimsel, iki popülasyon, her biri 48 yaşam; güven aralığı yok.
 
+### 2c. Sönüm gerileme kontrolü — O4a, TAHMİN-6 (tohum 150, pop. 102, `odor_validate_s --pilot --reward-target`)
+
+| T | plastic decoy-ilk | frozen decoy-ilk | anosmic decoy-ilk | plastic − frozen |
+|---|---|---|---|---|
+| 0,6 | 0,190 | 0,516 | 0,227 | −0,326 [−0,440; −0,211] |
+| 2,5 | 0,190 | 0,516 | 0,227 | aynı |
+
+**TAHMİN-6 tuttu — ve aslında fazlasıyla:** iki sonuç BİREBİR aynı (bölüm 3/6/12 eğilimi dahil). Neden: ödülsüz decoy temasında `ödül = 0` → `δ = kapı·(T·0 − V) = −kapı·V`, **T'den bağımsızdır**; yani T yalnız ödüllü temaslarda etki eder. Bu bir *yazılım doğrulamasıdır* (T'nin O5'te etkisi var — bkz. §2 —, O4a'da yok) ve sönümün T'den korunduğunu gösterir. **Sınır:** ödüllü temas içeren O1–O3 oyunları T ile DEĞİŞİR (kazanım hızlanır); onlar bu kontrolde denenmedi — T'yi global varsayılan yapmadan önce ayrı bir gerileme kontrolü gerekir.
+
 ## 3. Post-hoc yorum (hükmü etkilemez; mekanizma VARSAYIMI, sınanmadı)
 `δ = kapı·(T·ödül − V)`: ödüllü temasta itme `T − V` (büyük), ödülsüz temasta `−V` (T'den bağımsız). T büyütmek ödülün ağırlığını sönüm itmesine göre artırır; η büyütmek ikisini birden. O5'te iyi kokuda bile temasların %20'si ödülsüz olduğundan sönüm itmesi çoğunlukla **gürültüdür** → η büyürse yaklaşma kaybolur, T büyürse yaklaşma ve seçicilik artar. Bu açıklama tutarlı ama doğrudan sınanmadı (örn. kapalı-form kuram + δ'nın ödüllü/ödülsüz ayrımı ölçümü gerekir).
 
 ## 4. Yapılacak / bekleyen (sıra önemli)
 1. **Yineleme (TAHMİN-5, tohum 135, FARKLI popülasyon 100)**: `@1`, `@1/r2,5`, `@1/r4` — koşuyor. Tutmazsa T bulgusu popülasyona özgü sayılır.
-2. **Gerileme kontrolü (TAHMİN-6, koşudan önce)**: sönüm (O4a) T'den etkilenmemeli; ödülsüz decoy temasında `δ = −V`, T'den bağımsız. Tahmin: `plastic` (T=2,5) − `plastic` (T=0,6) decoy-ilk oranı farkı |Δ| ≤ 0,05 ve frozen'a göre azalma korunur (≈0,30). Bozulursa T global varsayılan OLAMAZ, yalnız oyuna özgü ayar kalır.
+2. **Gerileme kontrolü (TAHMİN-6, koşudan önce; §2c: tuttu, birebir aynı)**: sönüm (O4a) T'den etkilenmemeli; ödülsüz decoy temasında `δ = −V`, T'den bağımsız. Tahmin: `plastic` (T=2,5) − `plastic` (T=0,6) decoy-ilk oranı farkı |Δ| ≤ 0,05 ve frozen'a göre azalma korunur (≈0,30). Bozulursa T global varsayılan OLAMAZ, yalnız oyuna özgü ayar kalır.
 3. T hem O5'te hem sönümde sağlamsa: yeni **O5c** ön-kayıt (yeni tohum/popülasyon, ≥4 popülasyon) — T yükseltilmiş `plastic` vs varsayılan `plastic` (+ isteğe K=4); kural/güç R-6 ile.
 
 ## 5. Elle yazılmış bileşenler (R-11)
