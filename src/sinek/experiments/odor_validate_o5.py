@@ -39,13 +39,18 @@ def _chunks(n: int, chunks: int) -> list[list[int]]:
 
 
 def run_arms(pre, seed: int, agents: int, copies: int, episodes: int, switch: int, seconds: float, p_hi: float, p_lo: float, chunks: int,
-             plastic_scale: float = 1.0, only=None, verbose=True, part_dir=None, key: str = "", ens_k: int = 1, ens_tau=None, only_chunks=None) -> dict:
+             plastic_scale: float = 1.0, only=None, verbose=True, part_dir=None, key: str = "", ens_k: int = 1, ens_tau=None, only_chunks=None,
+             t_target: float | None = None) -> dict:
     """`ens_k > 1` (veya `ens_tau`): GELİŞTİRME kolu `plastic_ens` = plastic + `PlasticEnsembleBrain` (yalnız `--pilot`); varsayılan üç kol değişmez.
+    `t_target` (K-048, yalnız `--pilot`): GELİŞTİRME kolu `plastic_t` = plastic + DAN hedefi `reward_target`=t_target (diğer kollar değişmez; CRN eşli).
     `only_chunks`: yalnız bu parçaları koş (paralel işçiler için; kontrol noktası yazar, birleştirme yapılmaz)."""
     parts = _chunks(min(agents, pre.world.B), chunks)
     arm_defs = dict(ARM_DEFS)
     if ens_k > 1 or ens_tau is not None:
         arm_defs["plastic_ens"] = ("naive_plastic", True)
+    if t_target is not None:
+        arm_defs["plastic_t"] = ("naive_plastic", True)
+    suffix = lambda name: (f"|ens_k={ens_k}|ens_tau={ens_tau}" if name == "plastic_ens" else (f"|t_target={t_target}" if name == "plastic_t" else ""))
     res, t0 = {}, time.time()
     for name, (arm, _) in arm_defs.items():
         if only and name not in only:
@@ -54,24 +59,24 @@ def run_arms(pre, seed: int, agents: int, copies: int, episodes: int, switch: in
         for ci, ids in enumerate(parts):
             if only_chunks is not None and ci not in only_chunks:
                 continue
-            path, z = _part(part_dir, f"o5_{name}_c{ci}", key + (f"|ens_k={ens_k}|ens_tau={ens_tau}" if name == "plastic_ens" else ""))
+            path, z = _part(part_dir, f"o5_{name}_c{ci}", key + suffix(name))
             if z is not None:
                 pieces.append({k: z[k] for k in KEYS})
                 if verbose:
                     print(f"[{time.time() - t0:6.0f}s] O5 {name:<9} parça {ci + 1}/{chunks} kontrol noktasından okundu", flush=True)
                 continue
-            c = make_game_creature(pre, "O5", arm, ids, copies, seed + CHUNK_STRIDE * ci)
-            if name in ("plastic", "plastic_ens"):
+            c = make_game_creature(pre, "O5", arm, ids, copies, seed + CHUNK_STRIDE * ci, reward_target=t_target if name == "plastic_t" else None)
+            if name in ("plastic", "plastic_ens", "plastic_t"):
                 c.brain.eta_scale = torch.full((c.world.B,), float(plastic_scale))
             if name == "plastic_ens":
                 c.brain = PlasticEnsembleBrain(c.brain, ens_k, ens_tau)
             sch = bandit_schedule(c.world.swap.cpu(), episodes, switch, p_hi, p_lo)
-            r = play_sequence(c, sch, seconds, learn=ARMS[arm].eta > 0 and (name not in ("plastic", "plastic_ens") or plastic_scale > 0),
+            r = play_sequence(c, sch, seconds, learn=ARMS[arm].eta > 0 and (name not in ("plastic", "plastic_ens", "plastic_t") or plastic_scale > 0),
                               flip_swap_at=switch if name == "reference" else None)
             r["better"] = np.stack([(p[:, 1] > p[:, 0]).numpy().astype(int) for p in sch])
             pieces.append({k: r[k] for k in KEYS})
             if path is not None:
-                np.savez(path, key=key + (f"|ens_k={ens_k}|ens_tau={ens_tau}" if name == "plastic_ens" else ""), **pieces[-1])
+                np.savez(path, key=key + suffix(name), **pieces[-1])
             if verbose:
                 print(f"[{time.time() - t0:6.0f}s] O5 {name:<9} parça {ci + 1}/{chunks}: ödül oranı {pieces[-1]['got'].mean():.3f}", flush=True)
         if pieces:
@@ -170,6 +175,7 @@ def main(argv=None) -> dict | None:
     ap.add_argument("--ens-k", type=int, default=1, help="GELİŞTİRME (--pilot): plastic_ens kolu için topluluk büyüklüğü")
     ap.add_argument("--ens-tau", type=float, default=None, help="GELİŞTİRME (--pilot): plastic_ens okuma entegrasyon süresi (sn)")
     ap.add_argument("--only-chunks", default=None, help="virgülle parça indeksleri: yalnız bu parçaları koş (kontrol noktası yazar), değerlendirme yok")
+    ap.add_argument("--plastic-t", type=float, default=None, help="GELİŞTİRME (K-048; yalnız --pilot): ek kol plastic_t = plastic + DAN hedefi reward_target (varsayılan yapılandırma 0,6)")
     ap.add_argument("--only-arms", default=None, help="virgülle: yalnız bu kolları koş (kontrol noktası yaz), değerlendirme yok")
     ap.add_argument("--pilot", action="store_true")
     ap.add_argument("--threads", type=int, default=None)
@@ -187,6 +193,8 @@ def main(argv=None) -> dict | None:
     ens = a.ens_k > 1 or a.ens_tau is not None
     if ens and not (a.pilot or a.o5b):
         raise SystemExit("--ens-k/--ens-tau geliştirme seçenekleridir: yalnız --pilot ile (ön-kayıtlı doğrulayıcıda yalnız --o5b)")
+    if a.plastic_t is not None and not a.pilot:
+        raise SystemExit("--plastic-t geliştirme seçeneğidir: yalnız --pilot ile (K-048; doğrulayıcı için ayrı ön-kayıt)")
     if a.threads:
         torch.set_num_threads(a.threads)
     thr = Thr(delta=a.delta, ref_min=a.ref_min, n_boot=a.boot, n_perm=a.boot)
@@ -199,7 +207,7 @@ def main(argv=None) -> dict | None:
     only = set(a.only_arms.split(",")) if a.only_arms else None
     only_chunks = {int(x) for x in a.only_chunks.split(",")} if a.only_chunks else None
     res = run_arms(pre, a.seed, a.agents, a.copies, a.episodes, a.switch, a.seconds, a.p_hi, a.p_lo, a.chunks, a.plastic_scale, only, part_dir=out / "partial", key=key,
-                   ens_k=a.ens_k, ens_tau=a.ens_tau, only_chunks=only_chunks)
+                   ens_k=a.ens_k, ens_tau=a.ens_tau, only_chunks=only_chunks, t_target=a.plastic_t)
     if only or only_chunks is not None:
         return None
     blocks = blocks_for(a.episodes, a.switch)

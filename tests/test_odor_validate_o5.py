@@ -62,3 +62,19 @@ def test_o5b_mode_fixes_ensemble_and_default_chunks(cfg, tmp_path):
             V5.main(["--pre", "yok.npz", "--seed", "260", "--out", str(tmp_path / "o"), *bad])
     assert V5.O5B_ENS == (4, 0.04)
     assert V5.blocks_for(40, 20) == V5.O5_BLOCKS
+
+
+def test_optional_plastic_t_arm_pilot_only_default_unchanged_and_same_as_plastic_at_default_target(cfg, tmp_path):
+    """K-048: `plastic_t` yalnız pilotta; varsayılan kollar değişmez; T = yapılandırma değeri iken plastic ile BİREBİR aynı (CRN), farklı T iken farklı."""
+    pre = pretrain(cfg, odor_patterns(cfg.world, 3), 4, seed=3, episodes=1, seconds=4.0)
+    kw = dict(seed=150, agents=4, copies=2, episodes=4, switch=2, seconds=20.0, p_hi=0.8, p_lo=0.2, chunks=2, verbose=False)
+    for d in "abc":
+        (tmp_path / d).mkdir()
+    base = V5.run_arms(pre, only=("plastic",), part_dir=tmp_path / "a", key="t", **kw)
+    assert "plastic_t" not in V5.run_arms(pre, only=("plastic",), **kw)
+    same = V5.run_arms(pre, only=("plastic_t",), t_target=pre.brain.cfg.reward_target, part_dir=tmp_path / "b", key="t", **kw)
+    assert all(np.array_equal(base["plastic"][k], same["plastic_t"][k], equal_nan=True) for k in ("slot", "got"))
+    hi = V5.run_arms(pre, only=("plastic_t",), t_target=3.0, part_dir=tmp_path / "c", key="t", **kw)
+    assert not np.array_equal(base["plastic"]["slot"], hi["plastic_t"]["slot"]) or not np.array_equal(base["plastic"]["got"], hi["plastic_t"]["got"])
+    with pytest.raises(SystemExit):
+        V5.main(["--pre", "yok.npz", "--seed", "260", "--out", str(tmp_path / "o"), "--plastic-t", "2.5"])

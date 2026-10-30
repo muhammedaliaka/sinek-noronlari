@@ -43,6 +43,19 @@ Tek yönlü monoton doz–yanıt: T büyüdükçe seçicilik artıyor, temas-yok
 
 **TAHMİN-6 tuttu — ve aslında fazlasıyla:** iki sonuç BİREBİR aynı (bölüm 3/6/12 eğilimi dahil). Neden: ödülsüz decoy temasında `ödül = 0` → `δ = kapı·(T·0 − V) = −kapı·V`, **T'den bağımsızdır**; yani T yalnız ödüllü temaslarda etki eder. Bu bir *yazılım doğrulamasıdır* (T'nin O5'te etkisi var — bkz. §2 —, O4a'da yok) ve sönümün T'den korunduğunu gösterir. **Sınır:** ödüllü temas içeren O1–O3 oyunları T ile DEĞİŞİR (kazanım hızlanır); onlar bu kontrolde denenmedi — T'yi global varsayılan yapmadan önce ayrı bir gerileme kontrolü gerekir.
 
+### 2d. O5 tersine çevirme oyununda T = 2,5 (tohum 132 / pop. 102 ve 133 / pop. 100; `odor_validate_o5 --pilot --plastic-t 2.5`)
+
+Geliştirme panelinde (kanıt değil; tek yaşam = bir bağımsız canlı, 40 bölüm, geç bloklar 11–20 ve 31–40, her tohumda 24 yaşam × 2 kopya CRN eşli): NET TERCİH NP (+1 iyi ilk temas, −1 kötü, 0 temas yok).
+
+| kol | NP tohum 132 | NP tohum 133 | birleşik (n=80 yaşam) | temas oranı (132 / 133) |
+|---|---|---|---|---|
+| frozen | +0,006 | −0,004 | +0,001 | 0,50 / 0,46 |
+| plastic (T=0,6) | +0,145 | +0,205 | +0,175 | 0,63 / 0,68 |
+| plastic_ens (K=4, τ=0,04; 4× maliyet) | +0,285 | +0,276 | +0,281 | 0,80 / 0,80 |
+| **plastic_t (T=2,5; 1× maliyet)** | **+0,263** | **+0,335** | **+0,299** | 0,81 / 0,82 |
+
+plastic_t − plastic = +0,124 NP (bootstrap %95 AA [+0,072; +0,176], yaşamlar bağımsız sayıldı → dev düzeyinde, kanıt değil). Tek öğrenicide T=2,5, K=4 topluluğa (4× maliyet) denk NP veriyor ve temas oranını da yükseltiyor; bu K-048'in "T kaldıraç" bulgusunun O5 tersine çevirme oyununda da geçerli olduğunu gösterir. **Henüz kanıt değil:** yeni tohum/popülasyonlarda ön-kayıtlı O5c ve O1–O3 gerileme kontrolü gerekir; T genel varsayılan YAPILMAZ.
+
 ## 3. Post-hoc yorum (hükmü etkilemez; mekanizma VARSAYIMI, sınanmadı)
 `δ = kapı·(T·ödül − V)`: ödüllü temasta itme `T − V` (büyük), ödülsüz temasta `−V` (T'den bağımsız). T büyütmek ödülün ağırlığını sönüm itmesine göre artırır; η büyütmek ikisini birden. O5'te iyi kokuda bile temasların %20'si ödülsüz olduğundan sönüm itmesi çoğunlukla **gürültüdür** → η büyürse yaklaşma kaybolur, T büyürse yaklaşma ve seçicilik artar. Bu açıklama tutarlı ama doğrudan sınanmadı (örn. kapalı-form kuram + δ'nın ödüllü/ödülsüz ayrımı ölçümü gerekir).
 

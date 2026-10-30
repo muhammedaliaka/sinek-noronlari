@@ -11,6 +11,13 @@ Kollar: naive_plastic (öğrenen; O6b/c'de görsel açık), naive_plastic_blind 
  O6b (iki yuvada AYNI koku; ayrım yalnız görsel X/Y): naive_plastic_blind NP ≈ 0 (|NP| < 0,10; bilgi yok); naive_plastic (görsel) NP son blokta pozitif ama O6a'dan DÜŞÜK (görsel girdili KC ≈%8, VPN→KC bağlantıları PN'den ≈2× zayıf): NP ∈ [+0,10, +0,30].
  Yanlışlanma: görsel NP < +0,10 ise "görsel yol bu hâliyle yetersiz" (G-V0 ayrılabilirlik gösterse bile öğrenilen MBON okuması çok zayıf); NP ≥ O6a ise tahminim (görsel girdi daha zayıf) yanlış.
  Her iki durumda ayar sürüsü YAPILMAZ (E-08); önce kuram kontrolü ve karar defteri kaydı.
+
+SONUÇ-1 (O6b, tohum 140, kalibrasyonsuz): TAHMİN YANLIŞ — görsel kolda temas-yok 1,00 (blok 1'den), NP 0; kör kolda öğrenme var. Neden: eğitimsiz ağın görsel girdiye innate değeri V ≈ −0,2…−0,5
+(`class_balance` yalnız koku için kalibre; avoid-sınıfı MBON hızı artıyor) → yaratık görsel kaynaktan kaçıyor, hiç temas etmiyor, hiç öğrenemiyor. Kod hatası değil, kalibrasyon eksiği (E-17).
+ÇÖZÜM (K-051): `games.vis_calibration.neutral_scale` — görsel-KC→avoid-MBON çarpanı κ, ön-tanımlı ölçüt |V_ort(X,Y) − V(girdi yok)| ≤ 0,01 (düzey 0,6); görev bilgisi kullanılmaz. κ = 0,704 (pre_s102); düzey 0,2/0,6/1,0'da kalan sapma +0,018/−0,006/−0,016.
+
+TAHMİN-2 (nötrleştirilmiş görsel, aynı tohum 140; koşudan önce): görsel yaratık artık temas edebilir; naive_plastic NP son blokta ∈ [+0,05, +0,30] (belirsizlik geniş: kalan innate fark X≠Y ve VPN→KC zayıflığı);
+kör kol |NP| < 0,10. Görsel NP < +0,05 ise "görsel öğrenme bu hâliyle yetersiz" — ayar sürüsü yapılmaz (E-08).
 """
 from __future__ import annotations
 

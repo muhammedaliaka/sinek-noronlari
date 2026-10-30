@@ -81,6 +81,8 @@ def make_game_creature(pre: Creature, game: str | GameSpec, arm: str, agents: Se
         if a.brain != "naive":
             raise ValueError("görsel ön uç şimdilik yalnız 'naive' beyinlerle (ön-eğitimli beyin görsel ön uçsuz kuruldu)")
         cfg = dataclasses.replace(cfg, cbrain=dataclasses.replace(cfg.cbrain, n_vis_feat=vis_feat))
+        from .vis_calibration import neutral_scale          # E-17: eğitimsiz ağ görsel girdiye nötr (ön-tanımlı ölçüt)
+        cfg = dataclasses.replace(cfg, cbrain=dataclasses.replace(cfg.cbrain, vis_avoid_scale=neutral_scale(cfg.cbrain)))
     if trials % 2:
         raise ValueError("trials çift olmalı (ayna çiftleri)")
     world = GameWorld(cfg.world, sp, B, seed, dev, patterns=pre.world.patterns, swap=pre.world.swap[idx.to(pre.world.swap.device)], n_vis=vis_feat)

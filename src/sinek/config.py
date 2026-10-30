@@ -94,6 +94,7 @@ class ConnectomeBrainConfig:
     vis_gain: float = 4.0            # özellik etkinliğinden VPN etkinliğine doygunluk (odor_gain gibi)
     vis_tuning_seed: int = 0         # ayar matrisinin tohumu (popülasyon sabiti; canlı tohumundan bağımsız)
     vis_tuning_density: float = 0.4  # VPN başına özellik kanalına bağlanma olasılığı
+    vis_avoid_scale: float = 1.0     # görsel KC (VPN girdili) -> 'kaçın' sınıfı MBON sinapslarının çarpanı; eğitimsiz ağın görsel girdiye nötr olması için `games.vis_calibration.neutral_scale` ile kalibre edilir (E-17, K-051); 1 = kalibrasyonsuz
 
     # Kenyon hücreleri ve APL (gerçek PN->KC, KC->APL, APL->KC sinaps sayılarıyla)
     tau_kc_ms: float = 10.0

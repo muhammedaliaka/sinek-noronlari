@@ -119,3 +119,24 @@ def test_o6_dev_block_table_and_net_preference():
     t = block_table(slot, 2)
     assert t[0] == (3 / 8, 3 / 8, 2 / 8, 0.0) and t[1] == (4 / 8, 4 / 8, 0.0, 0.0)
     assert block_table(np.full((4, 3), -1), 4)[0][3] == 0.0                          # hiç temas yok → NP 0 (yaklaşmadan bağımsız sıfır düzeyi)
+
+
+def test_visual_neutral_calibration_removes_innate_aversion_and_only_touches_visual_kc_avoid_synapses(ccfg):
+    """E-17/K-051: kalibrasyonsuz görsel girdi V'yi belirgin biçimde düşürür; κ ile |ΔV| ≤ tol+payı; κ=1 ⇒ ağırlıklar aynı; yalnız görsel-KC→avoid sütunları ölçeklenir."""
+    import dataclasses
+    from sinek.games import vis_calibration as vc
+    cb = dataclasses.replace(ccfg.cbrain, n_vis_feat=6)
+    kw = dict(n=16, steps=24, seed=7)
+    v0 = vc._mean_v(cb, 0.6, with_vis=False, **kw)
+    assert vc._mean_v(cb, 0.6, with_vis=True, **kw) - v0 < -0.1                                                   # sorun gerçek: kalibrasyonsuz innate kaçınma
+    k = vc.neutral_scale(cb, n=16, steps=24, seed=7, iters=8)
+    assert 0.0 < k < 1.0
+    cbk = dataclasses.replace(cb, vis_avoid_scale=k)
+    assert abs(vc._mean_v(cbk, 0.6, with_vis=True, **kw) - v0) <= 0.05
+    b1, bk = ConnectomeBrain(cb, 2, 5), ConnectomeBrain(cbk, 2, 5)
+    nz = (b1.W0.abs() > 1e-9).numpy()                                                                            # sıfır sinapslar oran vermez
+    ratio = np.where(nz, (bk.W0 / b1.W0.where(b1.W0.abs() > 1e-9, torch.ones(()))).numpy(), 1.0)
+    changed = ~np.isclose(ratio, 1.0)
+    assert changed.any() and np.allclose(ratio[changed], k, atol=1e-4)
+    vis_kc = np.abs(mbmodel.load().w_vpn_kc).sum(0) > 0
+    assert not changed[~vis_kc].any()                                                                            # görsel olmayan KC'ler dokunulmaz

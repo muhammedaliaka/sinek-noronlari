@@ -92,6 +92,12 @@ class ConnectomeBrain:
         u = t(u_np)
         app, avo = u.clamp(min=0), (-u).clamp(min=0)
         self.cls_w = torch.stack([app / app.sum(), avo / avo.sum()], dim=1)   # (n_mbon, 2)
+        if self.n_vis > 0 and cfg.vis_avoid_scale != 1.0:          # eğitimsiz ağın görsel girdiye nötr olması (kalibrasyon; elle yazılmış, R-11)
+            vis_kc = t(np.abs(d.w_vpn_kc)).sum(0) > 0                # (n_kc,) VPN girdili KC'ler
+            S = torch.ones(self.n_kc, self.n_mbon, device=self.device)
+            S[vis_kc.unsqueeze(1) & (self.cls_w[:, 1] > 0).unsqueeze(0)] = cfg.vis_avoid_scale
+            self.W0 = self.W0 * S
+            self.W = self.W * S.unsqueeze(0)
         self.eta_scale = torch.ones(batch, device=self.device)
 
         self.a_kc = math.exp(-cfg.snn_dt_ms / cfg.tau_kc_ms)
