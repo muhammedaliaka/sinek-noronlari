@@ -17,14 +17,15 @@ from .stats import paired_cluster_ci
 from .odor_eval import O5_BLOCKS
 
 P_HI, P_LO = 0.8, 0.2
-ARMS = ("plastic", "frozen", "reference")
+ARMS = ("plastic", "frozen", "reference", "plastic_ens")
 
 
-def load(d: Path, seed: int) -> dict:
+def load(d: Path, seed: int, prefix: str = "s") -> dict:
     out = {}
     for arm in ARMS:
-        parts = sorted((d / f"s{seed}" / "partial").glob(f"o5_{arm}_c*.npz"), key=lambda p: int(p.stem.rsplit("_c", 1)[1]))
-        out[arm] = {k: np.concatenate([np.load(p)[k] for p in parts], axis=1) for k in ("slot", "got", "better")}      # (bölüm, yaşam)
+        parts = sorted((d / f"{prefix}{seed}" / "partial").glob(f"o5_{arm}_c*.npz"), key=lambda p: int(p.stem.rsplit("_c", 1)[1]))
+        if parts:                                                                                                      # plastic_ens yalnız O5b/geliştirme panellerinde var
+            out[arm] = {k: np.concatenate([np.load(p)[k] for p in parts], axis=1) for k in ("slot", "got", "better")}      # (bölüm, yaşam)
     return out
 
 
@@ -40,6 +41,7 @@ def main(argv=None) -> str:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dir", default="results/o5_val")
     ap.add_argument("--seeds", default="260,261")
+    ap.add_argument("--prefix", default="s", help="klasör öneki: O5 'o5_val/s<tohum>', O5b 'o5_val/b_s<tohum>'")
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
     L = ["# O5 POST-HOC çözümleme (hükmü değiştirmez)", "",
@@ -47,9 +49,11 @@ def main(argv=None) -> str:
          "| tohum | kol | temas oranı | temasta iyi koku seçme | ödül oranı |", "|---|---|---|---|---|"]
     dec = ["", "## `plastic − frozen` ödül farkının ayrışması (yaşam birimli eşli küme bootstrap %99 GA; betimsel)", "",
            "| tohum | ödül farkı | temas farkı | iyi-koku-seçme farkı (temaslı bölümler) | net tercih farkı (P3 ölçüsü) |", "|---|---|---|---|---|"]
+    dec_e = ["", "## `plastic_ens − plastic` ayrışması (aynı yöntem; betimsel)", "",
+             "| tohum | ödül farkı | temas farkı | iyi-koku-seçme farkı (temaslı bölümler) | net tercih farkı |", "|---|---|---|---|---|"]
     for seed in [int(s) for s in a.seeds.split(",")]:
-        res = {arm: late(r) for arm, r in load(Path(a.dir), seed).items()}
-        for arm in ARMS:
+        res = {arm: late(r) for arm, r in load(Path(a.dir), seed, a.prefix).items()}
+        for arm in res:
             m = res[arm]
             L.append(f"| {seed} | {arm} | {m['contact'].mean():.3f} | {m['good'].sum() / max(m['contact'].sum(), 1):.3f} | {m['got'].mean():.3f} |")
         pl, fr = res["plastic"], res["frozen"]
@@ -62,7 +66,15 @@ def main(argv=None) -> str:
             cells.append(f"{mn:+.3f} [{lo:+.3f}; {hi:+.3f}]")
         gp, gf = pl["good"].sum() / max(pl["contact"].sum(), 1), fr["good"].sum() / max(fr["contact"].sum(), 1)
         dec.append(f"| {seed} | {cells[0]} | {cells[1]} | {gp - gf:+.3f} ({gp:.3f} − {gf:.3f}) | {cells[2]} |")
-    text = "\n".join(L + dec) + "\n"
+        if "plastic_ens" in res:
+            en = res["plastic_ens"]
+            ce = []
+            for x, y in ((en["got"], pl["got"]), (en["contact"], pl["contact"]), (net(en), net(pl))):
+                mn, lo, hi = ci(x, y)
+                ce.append(f"{mn:+.3f} [{lo:+.3f}; {hi:+.3f}]")
+            ge = en["good"].sum() / max(en["contact"].sum(), 1)
+            dec_e.append(f"| {seed} | {ce[0]} | {ce[1]} | {ge - gp:+.3f} ({ge:.3f} − {gp:.3f}) | {ce[2]} |")
+    text = "\n".join(L + dec + (dec_e if len(dec_e) > 5 else [])) + "\n"
     if a.out:
         Path(a.out).write_text(text, encoding="utf-8")
     print(text)
