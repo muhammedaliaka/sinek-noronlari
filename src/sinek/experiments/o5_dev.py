@@ -26,6 +26,15 @@ TAHMİN-4 (2026-10-30, DAN hedefi `reward_target` T taraması, koşudan önce): 
 (normalize, ε=0,05 V) — küçük V'lerde gürültü kontrastı bozar. Seçicilik öğrenilen sinyalin genliği/gürültü oranıyla sınırlıysa T 0,6→1,5 geç blok seçiciliğini ≥ +0,05 artırır (≥0,70), T 2,5 doygunlukta (W ∈ [0,W0]) kalır ya da biraz bozulur;
 T 0,4 ise bozulur (≤ −0,03) ve temas-yok artar. Seçicilik T'ye duyarsızsa (|Δ| <0,05 hem 1,5 hem 2,5'te): sınır genlik değil, normalize hareket kuralı/geometri/okuma yapısı → sıradaki iş hareket kuralı. Ayrıca T büyüdükçe temasın azalmayacağını bekliyorum (η'nın tersine
 yaklaşma V'nin işaretiyle belirlenir, büyüklüğüyle değil).
+
+SONUÇ-4 (tohum 134, pre_s102, 48 yaşam; betimsel; CRN-eşli dünyalar; geç blok = b3,b4,b7,b8): T=0,4: seçicilik 0,627 / temas-yok 0,367 / ödül 0,34; T=0,6: 0,655 / 0,295 / 0,39; T=1,5: 0,700 / 0,207 / 0,46; T=2,5: 0,715 / 0,165 / 0,48.
+Tek yönlü monoton doz–yanıt. TAHMİN-4 değerlendirmesi (dürüst): T=1,5 seçicilik +0,045 (eşik +0,05'in hemen altı; mutlak ≥0,70 ✔), temas-yok azaldı (yaklaşma ARTTI; η'nın tersi ✔);
+T=0,4: −0,028 (eşik −0,03'e yakın, yön ✔, temas-yok arttı ✔); **T=2,5 için "doygunluk/bozulma" tahminim YANLIŞ çıktı**: eğri düzleşiyor (0,6→1,5: +0,045, 1,5→2,5: +0,015) ama bozulmuyor.
+T=2,5 ödül kazancı +0,09 (K=4 topluluğunun O5b ortalaması ≈+0,09) ama 1× hesap maliyetiyle. Tek popülasyon/tek tohum: yineleme gerekir.
+
+TAHMİN-5 (2026-10-30, yineleme: tohum 135, FARKLI popülasyon pre_s100; kollar @1, @1/r2.5, @1/r4, koşudan önce): (a) @1/r2.5 − @1 ödül ≥ +0,05 ve geç seçicilik ≥ +0,03, temas-yok azalır; (b) @1/r4 ≈ r2.5 (ödül farkı |Δ| ≤ 0,03)
+ya da hafif bozulma (seçicilik ≤ r2.5 − 0,02), çünkü ulaşılabilir V doygunluğunun üstünde δ > 0 kalıcı olur ve W iki koku için de tabana iner (ayırt etme zayıflar); temas artmaya devam eder.
+Tutmazsa: (a) tutmazsa T bulgusu popülasyona özgü (ya da kazananın laneti); (b) bozulmazsa T doygunluğu henüz görülmemiş, tarama genişletilir.
 """
 from __future__ import annotations
 
