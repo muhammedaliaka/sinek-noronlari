@@ -71,7 +71,7 @@ class ConnectomeBrain:
             if d.w_vpn_kc is None:
                 raise ValueError("görsel ön uç için vpn_kc.feather gerekli: python3 -I -m sinek.connectome.vpn")
             self.n_vpn = d.w_vpn_kc.shape[0]
-            self.w_vpn_kc = t(d.w_vpn_kc) * cfg.j_pn_kc            # (n_vpn, n_kc) PN ile aynı ölçek
+            self.w_vpn_kc = t(d.w_vpn_kc) * cfg.j_pn_kc * cfg.vis_kc_gain   # (n_vpn, n_kc) PN ile aynı ölçek × vis_kc_gain (1 = aynı)
             self.vis_tuning = t(vis_tuning(self.n_vpn, self.n_vis, cfg.vis_tuning_seed, cfg.vis_tuning_density))   # (n_vpn, n_vis)
 
         C = d.kc_mbon

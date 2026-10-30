@@ -16,6 +16,13 @@ SONUÇ-1 (O6b, tohum 140, kalibrasyonsuz): TAHMİN YANLIŞ — görsel kolda tem
 (`class_balance` yalnız koku için kalibre; avoid-sınıfı MBON hızı artıyor) → yaratık görsel kaynaktan kaçıyor, hiç temas etmiyor, hiç öğrenemiyor. Kod hatası değil, kalibrasyon eksiği (E-17).
 ÇÖZÜM (K-051): `games.vis_calibration.neutral_scale` — görsel-KC→avoid-MBON çarpanı κ, ön-tanımlı ölçüt |V_ort(X,Y) − V(girdi yok)| ≤ 0,01 (düzey 0,6); görev bilgisi kullanılmaz. κ = 0,704 (pre_s102); düzey 0,2/0,6/1,0'da kalan sapma +0,018/−0,006/−0,016.
 
+SONUÇ-2 (O6b, tohum 140, κ=0,704): TAHMİN-2 YANLIŞ — naive_plastic NP −0,03/−0,01/+0,05/+0,01/−0,01/0,00 (temas-yok 0,78→1,00); kör ≈0; naive ≈0. Teşhis: ısı dersi iki desene de genelleşiyor (V güvenli −0,09 / tuzak −0,14);
+görsel KC kodu çok seyrek ve çok örtüşük (X/Y KC kosinüsü 0,84, eşik üstü KC 3–4; koku A/B 0,44 ve 20 KC) → K-052 (G-V1 seçicilik ölçütü, vis_tuning_density ızgarası).
+
+K-053 (seçilen tasarım, KC kodu ölçütüyle; oyun yok): vis_tuning_density 0,10, vis_kc_gain 8 (m=4: PR 78/72 eşiği 80'i kıl payı kaçırdı, m=8: PR 118/103, cos 0,40).
+TAHMİN-3 (koşudan önce, aynı tohum 140, κ yeniden kalibre): naive_plastic NP son 3 blokta ort. ∈ [+0,05, +0,30] ve son blokta temas-yok < 0,90 (çöküş yok); kör kol |NP| < 0,10.
+Yanlışlanma: NP < +0,05 ya da temas-yok ≥ 0,95 → "görsel öğrenme bu tasarımda çalışmıyor"; ayar sürüsü yapılmaz, mekanizma yeniden teşhis edilir (E-08).
+
 TAHMİN-2 (nötrleştirilmiş görsel, aynı tohum 140; koşudan önce): görsel yaratık artık temas edebilir; naive_plastic NP son blokta ∈ [+0,05, +0,30] (belirsizlik geniş: kalan innate fark X≠Y ve VPN→KC zayıflığı);
 kör kol |NP| < 0,10. Görsel NP < +0,05 ise "görsel öğrenme bu hâliyle yetersiz" — ayar sürüsü yapılmaz (E-08).
 """

@@ -132,7 +132,7 @@ def test_visual_neutral_calibration_removes_innate_aversion_and_only_touches_vis
     k = vc.neutral_scale(cb, n=16, steps=24, seed=7, iters=8)
     assert 0.0 < k < 1.0
     cbk = dataclasses.replace(cb, vis_avoid_scale=k)
-    assert abs(vc._mean_v(cbk, 0.6, with_vis=True, **kw) - v0) <= 0.05
+    assert abs(vc._mean_v(cbk, 0.6, with_vis=True, **kw) - vc._mean_v(cbk, 0.6, with_vis=False, **kw)) <= 0.05              # ölçüt AYNI κ'da (E-19)
     b1, bk = ConnectomeBrain(cb, 2, 5), ConnectomeBrain(cbk, 2, 5)
     nz = (b1.W0.abs() > 1e-9).numpy()                                                                            # sıfır sinapslar oran vermez
     ratio = np.where(nz, (bk.W0 / b1.W0.where(b1.W0.abs() > 1e-9, torch.ones(()))).numpy(), 1.0)

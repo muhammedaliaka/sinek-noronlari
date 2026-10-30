@@ -43,9 +43,11 @@ def neutral_scale(cbrain_cfg, level: float = 0.6, tol: float = 0.01, n: int = 64
     if key in _CACHE:
         return _CACHE[key]
     base = dataclasses.replace(cbrain_cfg, vis_avoid_scale=1.0)
-    v0 = _mean_v(base, level, n, steps, seed, with_vis=False)
     lo, hi = 0.0, 1.0
-    f = lambda k: _mean_v(dataclasses.replace(base, vis_avoid_scale=k), level, n, steps, seed, with_vis=True) - v0
+
+    def f(k: float) -> float:                            # ölçüt AYNI κ'da: V(görsel girdi) − V(girdi yok) (VPN taban ateşlemesi de κ'dan etkilenir; E-19)
+        c = dataclasses.replace(base, vis_avoid_scale=k)
+        return _mean_v(c, level, n, steps, seed, with_vis=True) - _mean_v(c, level, n, steps, seed, with_vis=False)
     if f(1.0) >= -tol:                                   # zaten nötr ya da pozitif
         _CACHE[key] = 1.0
         return 1.0
