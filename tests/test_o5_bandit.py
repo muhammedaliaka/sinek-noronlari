@@ -41,6 +41,7 @@ def test_o5_only_changes_bandit_games(cfg):
 
 def test_o5_dev_arm_parsing():
     from sinek.experiments.o5_dev import parse_arm
-    assert parse_arm("naive_plastic@1") == ("naive_plastic", 1.0, 1, None)
-    assert parse_arm("naive_plastic@0.3/k4/t0.04") == ("naive_plastic", 0.3, 4, 0.04)
-    assert parse_arm("naive") == ("naive", None, 1, None)
+    assert parse_arm("naive_plastic@1") == ("naive_plastic", 1.0, 1, None, None)
+    assert parse_arm("naive_plastic@0.3/k4/t0.04") == ("naive_plastic", 0.3, 4, 0.04, None)
+    assert parse_arm("naive_plastic@1/r1.5") == ("naive_plastic", 1.0, 1, None, 1.5)
+    assert parse_arm("naive") == ("naive", None, 1, None, None)

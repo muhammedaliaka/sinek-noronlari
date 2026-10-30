@@ -5,7 +5,7 @@
 Her eleman bağımsız bir yaşam: ÖĞRENMEMİŞ ("naive") beyin, ardışık `--episodes` bölüm, ağırlıklar bölümler arasında korunur. İki kaynak: koku A (yuva 0) ve B (yuva 1), rastgele konumlar.
 İlk `--switch` bölümde canlıya göre iyi koku (rol dengeli, `swap`) ödül olasılığı p_hi=0,8, diğeri p_lo=0,2; sonra roller tersine döner.
 Ölçü: bloktaki ilk-temasların "o an iyi olan kokuya" oranı (temas yoksa sayılmaz; temas yok oranı ayrı), ödül oranı.
-Kol belirtimi: `<kol>@<öğrenme ölçeği>[/k<K>][/t<τ_valence>]`; `/k` ile `PlasticEnsembleBrain` (K bağımsız öğrenen kopya, karar için ortalama), `/t` okuma entegrasyon süresi.
+Kol belirtimi: `<kol>@<öğrenme ölçeği>[/k<K>][/t<τ_valence>][/r<reward_target>]`; `/k` ile `PlasticEnsembleBrain` (K bağımsız öğrenen kopya, karar için ortalama), `/t` okuma entegrasyon süresi, `/r` DAN hedefi (ödülün V karşılığı; varsayılan 0,6).
 ÖNCEDEN YAZILMIŞ TAHMİN (R-8): öğrenmesiz kol (naive@0) ≈0,5; tek denemede öğrenen plastik kol (ölçek 1) bir "kazan-kal / kaybet-değiştir" benzeri davranır: durağan %80/%20 için
 kuramsal denge ≈0,8 (ödül oranı ≈0,68), tersine çevirmeden sonra birkaç bölümde uyum; küçük ölçek (0,3) daha yüksek durağan başarı (ortalama alır) ama tersine çevirmede daha yavaş —
 yani öğrenme oranı için gerçek bir hız–gürültü ödünleşimi görülmeli. Bu tahminlerden biri tutmazsa belgede "yanlış çıktı" olarak yazılır.
@@ -18,10 +18,19 @@ TAHMİN-3 (2026-10-30, öğrenme hızı η ölçeği taraması, koşudan önce; 
 `kuram_iki_zaman`), yani beyin etkin α'sı düşükse ölçek 2 seçiciliği artırmalıydı. AMA geliştirme verisi (tohum 120): ölçek 0,3 ile 1 geç blok seçiciliği ayırt edilemez (0,61–0,68 vs 0,63–0,68).
 Bu veriden tahminim "duyarsızlık": naive_plastic@2 geç blok seçiciliği (b3,b4,b7,b8 ortalaması) @1'den en çok ±0,05 farklı; @4 en fazla @1 kadar iyi (temas kaybı/gürültü ile bozulma ≥0,03 olabilir).
 Tutarsa: ölçek kaldıraç değildir; sınır elle yazılmış δ kuralı / ağırlık sınırları / değer okuması yapısındadır → sıradaki iş DAN yolu (sönüm, PPL1). Tutmazsa (|Δ| >0,05): hız ödünleşimi gerçek, η × K ızgarasına geçilir.
+
+SONUÇ-3 (tohum 134, 48 yaşam, pre_s102; betimsel): geç blok seçiciliği (b3,b4,b7,b8) @1 0,655 / @2 0,660 / @4 0,623; geç blok temas-yok @1 0,30 / @2 0,37 / @4 0,42; ödül @1 0,39 / @2 0,37 / @4 0,33.
+TAHMİN-3 tuttu (@2: Δ=+0,005; @4 daha iyi değil, −0,03) — ek bulgu: η büyüdükçe yaklaşma azalıyor (temas-yok artıyor). Ölçek kaldıraç değil. @2/k4/t0.04 kolu bu sürümde sonradan eklenen sonuç satırında.
+
+TAHMİN-4 (2026-10-30, DAN hedefi `reward_target` T taraması, koşudan önce): denge değeri V* = T·p (iyi koku 0,8·T, kötü 0,2·T), yani öğrenilmiş V farkı 0,6·T ve gürültüden bağımsız; hareket kuralı KONTRAST = (v_l−v_r)/(|v_l|+|v_r|+0,05)
+(normalize, ε=0,05 V) — küçük V'lerde gürültü kontrastı bozar. Seçicilik öğrenilen sinyalin genliği/gürültü oranıyla sınırlıysa T 0,6→1,5 geç blok seçiciliğini ≥ +0,05 artırır (≥0,70), T 2,5 doygunlukta (W ∈ [0,W0]) kalır ya da biraz bozulur;
+T 0,4 ise bozulur (≤ −0,03) ve temas-yok artar. Seçicilik T'ye duyarsızsa (|Δ| <0,05 hem 1,5 hem 2,5'te): sınır genlik değil, normalize hareket kuralı/geometri/okuma yapısı → sıradaki iş hareket kuralı. Ayrıca T büyüdükçe temasın azalmayacağını bekliyorum (η'nın tersine
+yaklaşma V'nin işaretiyle belirlenir, büyüklüğüyle değil).
 """
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import time
 from pathlib import Path
 
@@ -33,26 +42,30 @@ from ..ensemble import PlasticEnsembleBrain
 from ..games.protocol import bandit_schedule, make_game_creature, play_sequence
 
 
-def parse_arm(tok: str) -> tuple[str, float | None, int, float | None]:
+def parse_arm(tok: str) -> tuple[str, float | None, int, float | None, float | None]:
     head, *opts = tok.split("/")
     name, _, sc = head.partition("@")
-    k, tau = 1, None
+    k, tau, rt = 1, None, None
     for o in opts:
         if o.startswith("k"):
             k = int(o[1:])
         elif o.startswith("t"):
             tau = float(o[1:])
+        elif o.startswith("r"):
+            rt = float(o[1:])
         else:
             raise ValueError(f"bilinmeyen kol seçeneği: {o}")
-    return name, (float(sc) if sc else None), k, tau
+    return name, (float(sc) if sc else None), k, tau, rt
 
 
 def run_arm(pre, arm: str, scale, seed: int, agents: int, copies: int, episodes: int, switch: int, seconds: float, p_hi: float, p_lo: float,
-            k: int = 1, tau: float | None = None) -> dict:
+            k: int = 1, tau: float | None = None, reward_target: float | None = None) -> dict:
     ids = list(range(min(agents, pre.world.B)))
     c = make_game_creature(pre, "O5", arm, ids, copies, seed)
     if scale is not None:
         c.brain.eta_scale = torch.full((c.world.B,), float(scale))
+    if reward_target is not None:                                                  # yalnız bu canlıların DAN hedefi (ödülün V karşılığı)
+        c.brain.cfg = dataclasses.replace(c.brain.cfg, reward_target=float(reward_target))
     if k > 1 or tau is not None:
         c.brain = PlasticEnsembleBrain(c.brain, k, tau)
     sch = bandit_schedule(c.world.swap.cpu(), episodes, switch, p_hi, p_lo)
@@ -100,8 +113,8 @@ def main(argv=None) -> str:
          "Hücre: iyi kokuyu seçme oranı (temas olanlar arasında) / temas-yok oranı. Son sütun: toplam ödül oranı (bölüm başına).", "",
          "| kol | " + " | ".join(f"b{i + 1} ({i * a.block + 1}-{(i + 1) * a.block})" for i in range(nb)) + " | ödül oranı |", "|---|" + "---|" * (nb + 1)]
     for tok in a.arms.split(","):
-        arm, sc, k, tau = parse_arm(tok)
-        r = run_arm(pre, arm, sc, a.seed, a.agents, a.copies, a.episodes, a.switch, a.seconds, a.p_hi, a.p_lo, k, tau)
+        arm, sc, k, tau, rt = parse_arm(tok)
+        r = run_arm(pre, arm, sc, a.seed, a.agents, a.copies, a.episodes, a.switch, a.seconds, a.p_hi, a.p_lo, k, tau, rt)
         bl = blocks(r, a.block)
         L.append(f"| {tok} | " + " | ".join(f"{g:.2f} / {nc:.2f}" for g, nc, _ in bl) + f" | {r['got'].mean():.2f} |")
         print(f"[{time.time() - t0:5.0f}s] {L[-1]}", flush=True)
