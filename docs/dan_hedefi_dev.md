@@ -24,6 +24,16 @@ Tahminler koşudan önce `o5_dev.py` docstring'inde commit edilmiştir (TAHMİN-
 
 Tek yönlü monoton doz–yanıt: T büyüdükçe seçicilik artıyor, temas-yok azalıyor, ödül artıyor (T=2,5: +0,09 — O5b'deki K=4 topluluğunun ortalama kazancı kadar, ama **1× hesap**). **TAHMİN-4 değerlendirmesi:** yön tuttu (T↓ bozar, T↑ iyileştirir); T=1,5 seçicilik kazancı +0,045 (eşik +0,05'in hemen altı); T=0,4 −0,028 (eşik −0,03'e yakın); **T=2,5 için "doygunluk/bozulma" tahmini YANLIŞ**: eğri düzleşiyor (+0,045 → +0,015) ama bozulmuyor.
 
+### 2b. Yineleme — tohum 135, FARKLI popülasyon (100), aynı protokol (TAHMİN-5)
+
+| kol | geç seçicilik | geç temas-yok | b5 | b6 | ödül/bölüm |
+|---|---|---|---|---|---|
+| T=0,6 (varsayılan) | 0,677 | 0,285 | 0,44 | 0,62 | 0,37 |
+| T=2,5 | 0,713 | 0,182 | 0,41 | 0,65 | 0,44 |
+| T=4 | 0,722 | 0,180 | 0,44 | 0,59 | 0,44 |
+
+**TAHMİN-5 değerlendirmesi:** (a) T=2,5 − T=0,6: ödül +0,07 (eşik ≥ +0,05 ✔), seçicilik +0,036 (eşik ≥ +0,03 ✔), temas-yok −0,10 ✔ → **bulgu farklı popülasyonda yinelendi**. (b) T=4 ≈ T=2,5 (ödül farkı 0,00 ≤ 0,03 ✔; seçicilik +0,009; "hafif bozulma" seçeneği gerçekleşmedi) → **plato** T≈2,5. "Temas artmaya devam eder" tahminim kısmen yanlış: temas-yok 0,182 → 0,180 (düz). Betimsel, iki popülasyon, her biri 48 yaşam; güven aralığı yok.
+
 ## 3. Post-hoc yorum (hükmü etkilemez; mekanizma VARSAYIMI, sınanmadı)
 `δ = kapı·(T·ödül − V)`: ödüllü temasta itme `T − V` (büyük), ödülsüz temasta `−V` (T'den bağımsız). T büyütmek ödülün ağırlığını sönüm itmesine göre artırır; η büyütmek ikisini birden. O5'te iyi kokuda bile temasların %20'si ödülsüz olduğundan sönüm itmesi çoğunlukla **gürültüdür** → η büyürse yaklaşma kaybolur, T büyürse yaklaşma ve seçicilik artar. Bu açıklama tutarlı ama doğrudan sınanmadı (örn. kapalı-form kuram + δ'nın ödüllü/ödülsüz ayrımı ölçümü gerekir).
 
