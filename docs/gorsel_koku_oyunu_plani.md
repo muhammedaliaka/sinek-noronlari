@@ -1,6 +1,6 @@
 # O6 — Görsel + koku oyun ailesi ("ısı kutusu"): sinekçil plan
 
-**Durum: PLAN (TASLAK v1, 2026-10-30).** Hiçbir ölçüt/eşik kesinleşmedi; doğrulayıcı koşu yok. Ön-kayıt (kural R-1) pilotlar ve güç analizinden sonra ayrı belgelerde (`docs/odor_o6a_plani.md` …) yazılıp commit edilir.
+**Durum: PLAN (TASLAK v1.1, 2026-10-30; v1.1: O6c protokol notu §4a, V0 altyapı yapıldı).** Hiçbir ölçüt/eşik kesinleşmedi; doğrulayıcı koşu yok. Ön-kayıt (kural R-1) pilotlar ve güç analizinden sonra ayrı belgelerde (`docs/odor_o6a_plani.md` …) yazılıp commit edilir.
 Kaynak: kullanıcının "koku tuzağı ve görsel karar" önerisi (4 aşama; üç kontrol kolu; ölüm yerine ceza). Bu belge o fikri **sinek biyolojisine ve deneysel düzene** göre yeniden yapılandırır. Kararlar: `karar_defteri.md` K-049.
 Etiketler: **[doğrulandı]** bu oturumda kaynakla/veriyle kontrol edildi (kaynak özeti düzeyinde ise belirtilir); **[doğrulanmadı]** anımsama; karar dayanağı yapılmaz (R-7).
 
@@ -58,6 +58,11 @@ Ortak: 2 yuva; bölüm başına ≤40 sn; güvenli yuva ödül +1 (olasılık p_
 Notlar: O6b, O6c'nin ön koşuludur (§2.6). O6d'de koku bilgi taşımadığı için "kokuya aşırı bağlanma" (sürekli aynı yuva) ayrı görünür. Test O6c/O6d'de dondurulmuş anlık görüntü ile de alınır.
 
 **Kollar ve eşleşme:** hepsi aynı tohum, aynı dünya (CRN). *Görsel kapalı* = aynı beyin, `vis` sıfırlanır (VPN lezyonu eşdeğeri; **sızıntı denetimi:** görsel sinyal olmayan denemelerde sonuç bit-bit aynı). *Yalnız koku* ≡ görsel kapalı (aynı kol; çift adlandırma karışıklığını kaldırdım). *Yalnız görsel* = anosmik kol. *Rastgele/kör* = dönüş kazancı 0 (yönelimsiz). *Referans* = elle yazılmış kehanet izleyici (ölçekleme için; tavan; kapı ≥ eşik).
+
+### 4a. O6c protokol notu (v1.1; koku çekiminin NEREDEN geldiği)
+"Koku tuzağa çekiyor" iddiası, kokunun **öğrenilmiş** bir çekime sahip olmasını gerektirir (tuzakta ödüllü koku, ama yalnız koku ile ödüllendirilmiş bir geçmiş). Ödül/ısı yuvaları aynı kokuyu yayıyorsa koku net olarak ≈0 değer kazanır ve çatışma olmaz. Bu yüzden O6c üç ayrı evredir (öğrenme ve test karışmasın):
+1. **Evre K (koku):** yalnız koku A ödüllü (O6a benzeri, tek yuva, görsel yok) → A çekici. 2. **Evre G (görsel):** kokusuz (anosmik-benzeri koşul, koku yok) X→ödül, Y→ısı → görsel anlam öğrenilir (O6b ile aynı, koku bilgisiz). 3. **Test (öğrenme KAPALI, `snapshot`):** güvenli yuva kokusuz + X; tuzak A (genlik k) + Y.
+Beklenen: görsel-kapalı kol tuzağa gider (NP<0, k büyüdükçe daha çok); görsel kullanan kol güvenliyi seçer. *Bilinen-etki benzetimi* (R-6) tam olarak bu fark üzerine kurulur. Bu not pilotta güncellenebilir; ön-kayıtta dondurulur.
 
 ## 5. Ölçütler (kesinleşme öncesi; E-15 dersiyle)
 1. **Ana: net tercih** `NP = P(güvenli ilk temas) − P(tuzak ilk temas)` (temas yoksa 0) — yaklaşma oranından bağımsız; sıfır-etki düzeyi ≈0 (O5b'de sınanmış mantık).
