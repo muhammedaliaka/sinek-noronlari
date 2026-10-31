@@ -75,3 +75,5 @@ python3 -I -m sinek.experiments.o5c_ozet --dir results/o5_val --out results/o5_v
 ```
 
 Beklenen süre (1 iş parçacığı/işçi, 4 işçi): ön-eğitim ≈30 dk; kol × parça işleri 96 adet (≈10–25 dk); toplam ≈5–8 saat. Konteyner yeniden başlarsa kuyruk aynı komutla sürer.
+
+**İşletim notu (2026-10-31, koşu başladıktan sonra; ölçütleri/tasarımı DEĞİŞTİRMEZ):** yukarıdaki süre tahmini iyimserdi. 12 yaşamlık bir `plastic`/`plastic_t` parçası 4 işçi yüklüyken ≈30–55 dk sürüyor; 96 parça + referans için gerçekçi toplam ≈12–20 saat, konteyner yaklaşık 1–1,5 saatte bir yeniden başlayıp çalışan işleri öldürdüğü için fazlası. Parça kontrol noktaları bu yüzden korunur; kuyruk aynı komutla sürer.
