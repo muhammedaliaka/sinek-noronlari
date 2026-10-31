@@ -62,6 +62,7 @@ details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-t
       <span><svg width="22" height="22"><circle cx="11" cy="11" r="8" fill="none" stroke="var(--neu)" stroke-width="2" stroke-dasharray="1 3"/><text x="11" y="15" text-anchor="middle" font-size="12" fill="var(--neu)">0</text></svg> ödülsüz kaynak (decoy)</span>
       <span><svg width="22" height="22"><polygon points="4,17 11,4 18,17 11,13" fill="var(--ink)"/></svg> canlı (sivri uç = yön)</span>
       <span>çizgi = son yol · alttaki iki çubuk = sol/sağ anten değeri (V)</span></div>
+    <div class="row" style="margin-top:8px"><label class="row">Kayıtlı tekrarlar <select id="rsel" aria-label="Kayıtlı tekrar"></select></label><button id="rplay">Tekrarı oynat</button><button id="rstop">Canlıya dön</button><span id="rstatus" class="mut" role="status"></span></div>
     <div class="grid" id="arenas"><p class="mut">Henüz başlatılmadı.</p></div>
     <h3 style="margin-top:12px">Bölüm sonuçları (ilk temas)</h3><div id="lhist" class="mut">Veri yok.</div>
   </section>
@@ -151,7 +152,7 @@ function buildLiveForm(o){const op=o.options;L.opts=op;const cfg=o.cfg||{};
 $("#lstart").onclick=()=>act("/api/live/start",{pre:$("#l-pre").value,game:$("#l-game").value,arm:$("#l-arm").value,seed:+$("#l-seed").value,agents:+$("#l-agents").value,trials:+$("#l-trials").value,seconds:+$("#l-sec").value,episodes:+$("#l-eps").value,device:$("#l-dev").value},"canlı izleme başlıyor");
 $("#lstop").onclick=()=>act("/api/live/stop");let paused=false;$("#lpause").onclick=()=>{paused=!paused;act("/api/live/pause",{on:paused});$("#lpause").textContent=paused?"Sürdür":"Duraklat"};
 $("#lspeed").oninput=e=>{$("#lspeedv").textContent=e.target.value+"×";api("/api/live/speed",{x:+e.target.value}).catch(()=>{})};
-function connectLive(){if(L.es)return;const es=new EventSource("/api/live/stream");L.es=es;es.onmessage=m=>{const d=JSON.parse(m.data);
+function connectLive(){if(L.es)return;const es=new EventSource("/api/live/stream");L.es=es;es.onmessage=m=>{if(L.replay)return;const d=JSON.parse(m.data);
   if(d.type==="layout"){L.layout=d;L.trails=Array.from({length:d.B},()=>[]);buildArenas(d)}
   else if(d.type==="frame"){L.fr=d;d.x.forEach((x,i)=>{const t=L.trails[i];if(t){t.push([x,d.y[i]]);if(t.length>500)t.shift()}});drawAll()}
   else if(d.type==="episode_end"){loadLiveState()}else if(d.type==="error"){$("#lstatus").textContent="HATA: "+d.error;toast(d.error,true)}};
@@ -175,7 +176,16 @@ async function loadLiveState(){try{const s=await api("/api/live/state");buildLiv
   const h=s.history;if(!h.length){$("#lhist").textContent="Veri yok."}else{const n=h.length,last=h.slice(-10);const cum=h.reduce((a,r)=>[a[0]+r.first_good,a[1]+r.first_other,a[2]+r.none],[0,0,0]).map(x=>x/n);
     $("#lhist").innerHTML=`<p>Toplam ${n} bölüm: ilk temas hedef <b>${(100*cum[0]).toFixed(0)}%</b> · diğer kaynak <b>${(100*cum[1]).toFixed(0)}%</b> · temas yok <b>${(100*cum[2]).toFixed(0)}%</b>${h[n-1].w_shift!=null?` · öğrenilen ağırlık değişimi (ort. |W−W0|) <b>${h[n-1].w_shift.toExponential(2)}</b>`:""}. Net tercih (hedef − diğer) son bölümler:</p>
     <table><tr><th>bölüm</th><th>hedef</th><th>diğer</th><th>yok</th><th>net</th></tr>${last.map(r=>`<tr><td>${r.ep}</td><td>${(100*r.first_good).toFixed(0)}%</td><td>${(100*r.first_other).toFixed(0)}%</td><td>${(100*r.none).toFixed(0)}%</td><td><b>${(r.first_good-r.first_other>=0?"+":"")+(r.first_good-r.first_other).toFixed(2)}</b></td></tr>`).join("")}</table><p class="mut">Az sayıda canlıyla bu tablo gürültülüdür; kanıt değil, gözlem.</p>`}}catch(e){}}
-refresh();loadLiveState();connectLive();setInterval(refresh,2500);setInterval(loadLiveState,5000);
+async function loadReplays(){try{const r=await api("/api/replays");const cur=$("#rsel").value;$("#rsel").innerHTML=r.length?r.map(x=>`<option value="${esc(x.name)}">${esc(x.name.replace(".json.gz",""))} (${Math.round(x.size/1024)} KB)</option>`).join(""):"<option value=''>(kayıt yok)</option>";if(cur)$("#rsel").value=cur}catch(e){}}
+$("#rplay").onclick=async()=>{const n=$("#rsel").value;if(!n)return;try{const d=await api("/api/replay?name="+encodeURIComponent(n));playReplay(d,n)}catch(e){toast(e.message,true)}};
+$("#rstop").onclick=()=>{L.replay=null;clearTimeout(L.rt);$("#rstatus").textContent="canlı akışa dönüldü"};
+function playReplay(d,name){clearTimeout(L.rt);L.replay=name;let ei=0,fi=0;const eps=d.episodes.filter(e=>e.frames.length);if(!eps.length){toast("tekrarda kare yok",true);L.replay=null;return}
+  const start=e=>{L.layout=e.layout;L.trails=Array.from({length:e.layout.B},()=>[]);buildArenas(e.layout)};start(eps[0]);
+  const tick=()=>{if(L.replay!==name)return;const e=eps[ei],f=e.frames[fi];L.fr=f;f.x.forEach((x,i)=>L.trails[i].push([x,f.y[i]]));drawAll();
+    $("#rstatus").textContent=`TEKRAR · ${name.replace(".json.gz","")} · bölüm ${f.ep}/${eps.length} · ${f.t} sn`;fi++;
+    if(fi>=e.frames.length){fi=0;ei++;if(ei>=eps.length){$("#rstatus").textContent="tekrar bitti";L.replay=null;return}start(eps[ei]);L.rt=setTimeout(tick,900);return}
+    L.rt=setTimeout(tick,1000/(7*(+$("#lspeed").value||1)))};tick()}
+refresh();loadLiveState();loadReplays();setInterval(loadReplays,15000);connectLive();setInterval(refresh,2500);setInterval(loadLiveState,5000);
 </script>
 </body>
 </html>

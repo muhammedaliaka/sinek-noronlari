@@ -1,6 +1,6 @@
 # Uzak kontrol: arkadaşın (GPU'lu) bilgisayarında sunucu + canlı panel + akıllı kuyruk
 
-Karar: K-059. Kod: `src/sinek/ops/`. Sınama: `tests/test_ops.py` (15 test). **Bu bir altyapıdır; bilimsel kanıt üretmez.**
+Karar: K-059. Kod: `src/sinek/ops/`. Sınama: `tests/test_ops.py` (16 test). **Bu bir altyapıdır; bilimsel kanıt üretmez.**
 
 ## 1. Ne yapar (yalnız gerçek veri; sahte yüzde/çizim yok)
 * **Makine durumu:** CPU çekirdeği/yük, RAM, boş disk, GPU adı/belleği/kullanımı (`nvidia-smi` varsa), kod sürümü (commit), PyTorch sürümü.
@@ -10,21 +10,23 @@ Karar: K-059. Kod: `src/sinek/ops/`. Sınama: `tests/test_ops.py` (15 test). **B
 * **Sonuç dosyaları:** `results/` ve `docs/` salt-okunur gezilir.
 * **Dayanıklılık:** durum `results/ops/state.json`’da; sunucu yeniden başlarsa çalışan süreçlere yeniden bağlanır; ölen işi, `devam edebilir` ise (O5c gibi: kol×parça kontrol noktası) AYNI hesapla yeniden başlatır (≤3 deneme), değilse “kesildi” der ve elle yeniden sıraya alınır.
 
-## 2. Arkadaşın yapacağı (≈10 dk)
-1. Python ≥3.10, git. NVIDIA sürücüsü yüklüyse CUDA’lı PyTorch’u <https://pytorch.org/get-started/locally/> adresindeki komutla kurun (CPU sürümü de çalışır).
-2. `git clone <depo>` → `git checkout ccr-2e9cee22-nxwnkt` → `pip install -e .` (Windows’ta doğrulayıcı kuyruğu `bash` ister: **WSL2** önerilir; CUDA WSL2’de de çalışır).
-3. `scripts/ops_baslat.sh` (Windows: `scripts\ops_baslat.bat`). Ekranda `http://127.0.0.1:8765/?token=…` çıkar; tarayıcıda açın (jeton çereze alınır, adresten silinir). Jeton `~/.sinek_ops_token` dosyasındadır (yalnız sahibi okur).
-4. Panelden “Birim testleri”ni ve “Hızlı demo popülasyonu”nu çalıştırın → kurulum sağlam mı görünür; sonra canlı izlemeyi deneyin.
-5. Bilgisayar uykuya geçmesin (kapak/güç ayarı). Kapanırsa sunucuyu yeniden başlatmak yeter: işler kaldığı yerden sürer.
+## 2. Seçilen teknik ve arkadaşın yapacağı (≈10 dk)
+**Teknik (K-060): git yayını.** Sunucu arkadaşın makinesinde yerel çalışır; dışarıya hiçbir port açılmaz. Makine GitHub'daki `ops-relay` dalına kendi durumunu/raporlarını/tekrarlarını yazar, aynı daldan imzalı komutları okur. Ben (uzaktaki ajan) de aynı daldan okur/yazarım. Neden bu: (1) bana açık olan tek yol GitHub; (2) güvenlik duvarı/NAT/CGNAT/uyku-uyanma sorunu yok, çünkü bağlantı hep arkadaşın makinesinden DIŞARI doğru; (3) imza ile korunur, TLS gerekmez; (4) makine kapansa komutlar dalda bekler, açılınca uygulanır; (5) tünel/VPN kurulumu ve hesap paylaşımı gerekmez. Bedeli: gecikme (komut ≈15 sn–1 dk) ve canlı izlemenin uzaktan **kare kare akmaması** — onun yerine canlı izleme her bölümde **tekrar dosyası** (gerçek karelerin seyreltilmiş kaydı, 40 KB/2 bölüm) olarak dala konur; arayüzdeki “Kayıtlı tekrarlar”dan oynatılır. Gerçek zamanlı canlı izleme arkadaşın kendi tarayıcısındaki yerel panelde vardır.
+1. Python ≥3.10, git. NVIDIA sürücüsü varsa CUDA'lı PyTorch'u <https://pytorch.org/get-started/locally/> komutuyla kurun (CPU sürümü de çalışır).
+2. `git clone <depo>` → `git checkout ccr-2e9cee22-nxwnkt` → `pip install -e .` (Windows'ta doğrulayıcı kuyruğu `bash` ister: **WSL2** önerilir).
+3. Depoya **yazma yetkisi** verin (GitHub kişisel erişim jetonu ya da `gh auth login`).
+4. `python3 -I -m sinek.ops.setup --autostart` — her şeyi denetler (torch/CUDA, git yayını gerçek bir deneme turuyla, jeton) ve eksikse ne yapılacağını söyler; Linux'ta açılışta otomatik başlatma kurar (Windows/mac için tek satırlık komut yazar). `--rotate-token` jetonu yeniler.
+5. `scripts/ops_baslat.sh --relay origin:ops-relay` (autostart kurduysanız gerekmez). Panel: `http://127.0.0.1:8765/?token=…`.
+6. Jetonu bana verin (komut imzası için). Sohbete yapıştırdıysanız iş bitince `--rotate-token`.
+7. Bilgisayar uykuya geçmesin. Kapanırsa sunucuyu yeniden başlatmak yeter: işler kaldığı yerden sürer.
 
-## 3. Benim (uzaktaki ajanın) bağlanma yolları — dürüst durum
-Bulut oturumumdan arkadaşın bilgisayarına doğrudan ağ yolu yoktur; üç yol var. **Hiçbirini bu ortamdan uçtan uca sınayamadım** (arkadaşın makinesi yok; çıkış ağı kısıtlı). Yerel sınama: sunucu, canlı izleme, kuyruk ve git yayını (yerel bare depoyla) `tests/test_ops.py` ile sınandı.
-| yol | nasıl | gereken | not |
-|---|---|---|---|
-| **A. Git yayını** (önerilen başlangıç) | sunucu `--relay origin:ops-relay` ile açılır; `ops-relay` dalına imzalı komut yazarım, makine dakikada bir okur, durumu/raporları aynı dala yazar | arkadaşın makinesinde depoya **yazma yetkisi** olan git girişi (ör. kişisel erişim jetonu) | bağlantı kabul etmek gerekmez; ≤1 dk gecikme; yalnız metin raporu iletilir |
-| **B. Tünel** | `cloudflared tunnel --url http://127.0.0.1:8765` (ya da `ssh -R`, ngrok) verdiği https adresini bana iletirsiniz; `python3 -I -m sinek.ops.client http --url … --token … summary` | tünel aracı | adres dışarı açılır: jeton uzun/gizli kalmalı; bu ortamın çıkış ağı bu adrese izin vermeyebilir [denenmedi] |
-| **C. Claude Remote Control** | arkadaşın bilgisayarında kullanıcının kendi hesabıyla `claude remote-control` (depo klasöründe) | kullanıcı hesabı | oturuma o klasör bağlanır (kullanıcı onaylar); bu araç yalnız KULLANICININ kendi bilgisayarları içindir |
-Komutlar yalnız `src/sinek/ops/registry.py`’deki işleri başlatabilir (keyfi komut yok).
+## 3. Benim (uzaktaki ajanın) kullanımı
+* Durum + raporlar + tekrarlar: `python3 -I -m sinek.ops.client relay --token T status`
+* Test başlatma: `… relay --token T send enqueue o5c_pretrain_validator --confirm` · `send enqueue gv0 --param n=8` · `send auto on` · `send cancel JOB` · `send update` (kodu çek).
+* Komutun uygulandığı `status.json` içindeki `acked` bölümünden görülür (sonuç metniyle). Geçmiş sıkıştırması sırasında okunmamış bir komut kaybolabilir; `acked`'te görünmeyen komut yeniden gönderilir.
+* Dal şişmesin diye: değişmeyen durumda commit yok (nabız 15 dk), ucuz yoklama (`git ls-remote`) 15 sn, 400 itmede dal tek commit'e sıkıştırılır, en fazla 8 küçük (≤600 KB) tekrar tutulur; ağır dosya (npz) asla itilmez.
+* **Yedek yollar** (gerekirse): HTTP + tünel (`cloudflared tunnel --url http://127.0.0.1:8765`; adresi iletirsiniz; `client http …`); kullanıcının kendi hesabıyla `claude remote-control`. İkisi de **denenmedi**; git yayını yerelde (bare depoyla) uçtan uca sınandı, gerçek GitHub üzerinde arkadaşın makinesiyle **sınanmadı**.
+Komutlar yalnız `src/sinek/ops/registry.py`'deki işleri başlatabilir (keyfi komut yok).
 
 ## 4. Güvenlik modeli
 * Jeton olmadan hiçbir uç nokta açılmaz (ana sayfa dahil). Jeton ≥128 bit rastgele, dosyası `0600`. Yanlış jetonda 0,5 sn gecikme, IP başına dakikada 10 hatadan sonra kilit (429).

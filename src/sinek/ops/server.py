@@ -24,7 +24,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import registry as R
 from .jobs import JobManager
-from .live import LiveSession
+from .live import LiveSession, replay_list, replay_read
 
 ROOT = R.ROOT
 STATIC = Path(__file__).parent / "static"
@@ -242,6 +242,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, a.jobs.log_tail(jid, int(qs.get("bytes", 20000))).encode(), "text/plain; charset=utf-8")
             if u.path == "/api/files":
                 return self._json(list_files(qs.get("path", "results")))
+            if u.path == "/api/replays":
+                return self._json(replay_list())
+            if u.path == "/api/replay":
+                return self._json(replay_read(qs.get("name", "")))
             if u.path == "/api/live/state":
                 return self._json(a.live.state())
             if u.path == "/api/live/stream":

@@ -15,6 +15,7 @@ from sinek.games.protocol import pretrain
 from sinek.ops import registry as R
 from sinek.ops import server as S
 from sinek.ops.jobs import JobManager
+from sinek.ops import live as LV
 from sinek.ops.live import LiveSession
 from sinek.ops.registry import Param, ParamError, TestDef
 from sinek.ops.relay import Relay, sign, verify
@@ -261,6 +262,35 @@ def test_relay_roundtrip_with_local_bare_remote(tmp_path):
     assert st["acked"]["c1"]["result"].startswith("sıraya alındı") and st["acked"]["c2"]["result"].startswith("RET")
     rl.cycle_once()
     assert len(jm.state["jobs"]) == 1                                   # tekrar uygulanmaz
+    # değişen yokken boşuna commit yok (depo şişmesin)
+    head = git(tmp_path / "srv_clone", "rev-parse", "HEAD")
+    rl.cycle_once()
+    assert git(tmp_path / "srv_clone", "rev-parse", "HEAD") == head
+    # tekrar dosyası dala kopyalanır, ağır dosya kopyalanmaz
+    from sinek.ops import live as LV
+    LV.REPLAY_DIR.mkdir(parents=True, exist_ok=True)
+    small, big = LV.REPLAY_DIR / "_t_kucuk.json.gz", LV.REPLAY_DIR / "_t_buyuk.json.gz"
+    try:
+        small.write_bytes(b"x" * 100)
+        big.write_bytes(b"y" * 700_000)
+        rl.cycle_once()
+        names = {p.name for p in (tmp_path / "srv_clone" / "replays").glob("*")}
+        assert "_t_kucuk.json.gz" in names and "_t_buyuk.json.gz" not in names
+    finally:
+        small.unlink(missing_ok=True)
+        big.unlink(missing_ok=True)
+    # geçmiş sıkıştırma: eşik aşılınca dal tek commit'e iner, durum korunur
+    import sinek.ops.relay as RM
+    old = RM.PRUNE_AFTER
+    RM.PRUNE_AFTER = 1
+    try:
+        jm.enqueue("p", {"x": 3})
+        rl.cycle_once()
+    finally:
+        RM.PRUNE_AFTER = old
+    cl2 = ensure_clone(tmp_path / "cli2", "origin", "ops-relay", url=str(bare))
+    assert int(git(cl2, "rev-list", "--count", "HEAD").strip()) == 1
+    assert json.loads((cl2 / "status.json").read_text())["acked"]["c1"]["result"].startswith("sıraya alındı")
 
 
 # --------------------------------------------------------------------------- canlı izleme
@@ -283,8 +313,28 @@ def test_live_session_streams_real_world_state(cfg, tmp_path):
         lay = json.loads(snap[0])
         assert lay["type"] == "layout" and lay["B"] == 2 and lay["arena"] == 40.0
         assert len(ls.history) == 1 and len(ls.history[0]["slots"]) == 2
+        rp = LV.replay_read(ls.status["replay"])                          # kayıt = yayınlanan gerçek kareler
+        assert rp["episodes"][0]["layout"]["B"] == 2 and rp["episodes"][0]["frames"] and rp["episodes"][0]["end"]["slots"] == ls.history[0]["slots"]
+        with pytest.raises(ParamError):
+            LV.replay_read("../../../etc/passwd")
+        with pytest.raises(ParamError):
+            LV.replay_read("yok.json.gz")
         fr = json.loads(snap[-1])
         assert fr["type"] == "frame" and all(0 <= x <= 40 for x in fr["x"]) and len(fr["vl"]) == 2
     finally:
+        for rp_ in LV.REPLAY_DIR.glob("*_O2near_plastic_s120.json.gz"):
+            rp_.unlink()
         path.unlink(missing_ok=True)
         Path(str(path) + ".json").unlink(missing_ok=True)
+
+
+def test_setup_check_rotates_token_without_touching_remote(tmp_path, monkeypatch, capsys):
+    from sinek.ops import setup as SU
+    monkeypatch.setattr(S, "TOKEN_FILE", tmp_path / "tok")
+    monkeypatch.setattr(SU, "TOKEN_FILE", tmp_path / "tok")
+    monkeypatch.delenv("SINEK_OPS_TOKEN", raising=False)
+    assert SU.main(["--no-relay-check"]) == 0
+    t1 = (tmp_path / "tok").read_text().strip()
+    assert SU.main(["--no-relay-check", "--rotate-token"]) == 0
+    t2 = (tmp_path / "tok").read_text().strip()
+    assert t1 != t2 and len(t2) >= 32 and t2 in capsys.readouterr().out

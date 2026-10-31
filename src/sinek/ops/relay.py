@@ -18,7 +18,12 @@ from . import registry as R
 
 ROOT = R.ROOT
 MAX_AGE = 3 * 86400
-CYCLE = 60.0
+CYCLE = 15.0                 # ucuz kontrol (git ls-remote) aralığı; tam döngü yalnız uzak dal değişince/yerel durum değişince/5 dk'da bir
+FULL_EVERY = 300.0
+HEARTBEAT = 900.0            # durum değişmese de en az 15 dk'da bir nabız yazılır
+PRUNE_AFTER = 400            # bu kadar itmeden sonra dal tek commit'e sıkıştırılır (depo şişmesin)
+REPLAY_PUSH_MAX = 600_000
+REPLAY_PUSH_KEEP = 8
 
 
 def canon(cmd: dict) -> bytes:
@@ -74,6 +79,10 @@ class Relay:
         self.dir = workdir or ROOT / "results" / "ops" / "relay"
         self.reported: set[str] = set()
         self.stop = threading.Event()
+        self.last_head = None
+        self.last_full = 0.0
+        self.last_sig = None
+        self.last_push = 0.0
 
     def start(self) -> None:
         threading.Thread(target=self._loop, daemon=True, name="ops-relay").start()
@@ -81,11 +90,35 @@ class Relay:
     def _loop(self) -> None:
         while not self.stop.is_set():
             try:
-                self.cycle_once()
+                if self.due():
+                    self.cycle_once()
                 self.app.relay_info = {"branch": f"{self.remote}:{self.branch}", "last_sync": time.time(), "error": None}
             except Exception as e:
                 self.app.relay_info = {"branch": f"{self.remote}:{self.branch}", "last_sync": time.time(), "error": str(e)[:300]}
             self.stop.wait(self.cycle)
+
+    def remote_head(self) -> str | None:
+        try:
+            url = self.url or git(ROOT, "remote", "get-url", self.remote).strip()
+            out = subprocess.run(["git", "ls-remote", url, f"refs/heads/{self.branch}"], capture_output=True, text=True, timeout=30).stdout.split()
+            return out[0] if out else None
+        except Exception:
+            return self.last_head
+
+    def due(self) -> bool:
+        """Ucuz yoklama: uzak dal değiştiyse (yeni komut), yerel iş durumu değiştiyse ya da süre dolduysa tam döngü."""
+        now = time.time()
+        head = self.remote_head()
+        changed = head != self.last_head
+        local = self.local_sig() != self.last_sig
+        if changed or local or now - self.last_full > FULL_EVERY:
+            self.last_head, self.last_full = head, now
+            return True
+        return False
+
+    def local_sig(self) -> str:
+        jobs = [(j["id"], j["status"], j["attempts"], (j.get("progress") or {}).get("done")) for j in self.app.jobs.state["jobs"][-40:]]
+        return json.dumps([jobs, self.app.jobs.state["auto"]], default=str)
 
     # ------------------------------------------------------------------
     def apply(self, cmd: dict) -> str:
@@ -139,11 +172,43 @@ class Relay:
             if j["status"] in ("done", "failed") and j["id"] not in self.reported and not (d / "reports" / f"{j['id']}.md").exists():
                 (d / "reports" / f"{j['id']}.md").write_text(self.report(j), encoding="utf-8")
             self.reported.add(j["id"])
+        self.sync_replays(d)
+        sig = self.local_sig() + json.dumps(acked, sort_keys=True) + json.dumps(sorted(p.name for p in (d / "replays").glob("*")) if (d / "replays").exists() else [])
+        now = time.time()
+        if sig == self.last_sig and now - self.last_push < HEARTBEAT and prev:
+            return                                               # değişen yok: boşuna commit yok
+        status["pushes"] = int(prev.get("pushes", 0)) + 1
         st_path.write_text(json.dumps(status, ensure_ascii=False, indent=1, default=str))
         git(d, "add", "-A")
         if git(d, "status", "--porcelain").strip():
-            git(d, "commit", "-m", f"ops: durum {time.strftime('%F %T')}")
-            git(d, "push", "origin", f"HEAD:{self.branch}")
+            if status["pushes"] > PRUNE_AFTER:                    # geçmişi sıkıştır: tek commit, zorla it (okunmamış komut kaybolabilir; istemci ack'e bakar)
+                status["pushes"] = 1
+                st_path.write_text(json.dumps(status, ensure_ascii=False, indent=1, default=str))
+                git(d, "checkout", "--orphan", "_yeni")
+                git(d, "add", "-A")
+                git(d, "commit", "-m", "ops: sıkıştırılmış durum")
+                git(d, "push", "--force", "origin", f"HEAD:{self.branch}")
+                git(d, "branch", "-M", self.branch)
+            else:
+                git(d, "commit", "-m", f"ops: durum {time.strftime('%F %T')}")
+                git(d, "push", "origin", f"HEAD:{self.branch}")
+        self.last_sig, self.last_push = sig, now
+        self.last_head = self.remote_head()
+
+    def sync_replays(self, d: Path) -> None:
+        """En yeni küçük canlı-izleme tekrarlarını dala koyar (uzaktan izlenebilsin); ağır dosya yok."""
+        from .live import REPLAY_DIR
+        src = sorted(REPLAY_DIR.glob("*.json.gz"), key=lambda p: p.stat().st_mtime, reverse=True) if REPLAY_DIR.exists() else []
+        keep = [p for p in src if p.stat().st_size <= REPLAY_PUSH_MAX][:REPLAY_PUSH_KEEP]
+        (d / "replays").mkdir(exist_ok=True)
+        want = {p.name for p in keep}
+        for old in (d / "replays").glob("*.json.gz"):
+            if old.name not in want:
+                old.unlink()
+        for p in keep:
+            t = d / "replays" / p.name
+            if not t.exists() or t.stat().st_size != p.stat().st_size:
+                t.write_bytes(p.read_bytes())
 
     def report(self, j: dict) -> str:
         t = self.app.jobs.reg.get(j["test_id"])

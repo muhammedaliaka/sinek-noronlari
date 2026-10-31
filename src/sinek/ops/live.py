@@ -5,7 +5,9 @@ Not: canlı izleme DOĞRULAYICI DEĞİLDİR (geliştirme tohumları 100-149; R-2
 """
 from __future__ import annotations
 
+import gzip
 import json
+import re
 import threading
 import time
 from pathlib import Path
@@ -24,6 +26,23 @@ LIVE_ARMS = tuple(ARMS)
 SLOT_NAMES = {0: "hedef (yuva 0)", 1: "ikinci kaynak (yuva 1)"}
 
 
+REPLAY_DIR = R.ROOT / "results" / "ops" / "replays"
+REPLAY_KEEP_EVERY = 3            # her 3. kare kaydedilir (≈ 7 kare/sn; tekrar için yeter, dosya küçük kalır)
+REPLAY_MAX_FRAMES = 4000
+
+
+def replay_list() -> list[dict]:
+    REPLAY_DIR.mkdir(parents=True, exist_ok=True)
+    return [{"name": p.name, "size": p.stat().st_size, "mtime": p.stat().st_mtime} for p in sorted(REPLAY_DIR.glob("*.json.gz"), reverse=True)[:50]]
+
+
+def replay_read(name: str) -> dict:
+    if not re.fullmatch(r"[A-Za-z0-9_.\-]+\.json\.gz", name) or name not in {r["name"] for r in replay_list()}:
+        raise R.ParamError("tekrar yok")
+    with gzip.open(REPLAY_DIR / name, "rt", encoding="utf-8") as f:
+        return json.load(f)
+
+
 class LiveSession:
     def __init__(self):
         self.cond = threading.Condition()
@@ -38,6 +57,9 @@ class LiveSession:
         self.history: list[dict] = []
         self.cfg: dict = {}
         self.speed = 1.0
+        self.rec: dict | None = None
+        self.rec_path: Path | None = None
+        self._nframe = 0
 
     # --------------------------------------------------------------------- kontrol
     def start(self, pre: str, game: str, arm: str, seed: int, agents: int = 2, trials: int = 2, seconds: float = 30.0,
@@ -62,6 +84,10 @@ class LiveSession:
         self.history = []
         self.cfg = dict(pre=pre, game=game, arm=arm, seed=seed, agents=agents, trials=trials, seconds=seconds, device=device, fps=fps, episodes=episodes)
         self.status = {"state": "kuruluyor"}
+        name = f"{time.strftime('%m%d-%H%M%S')}_{game}_{arm}_s{seed}.json.gz"
+        self.rec = {"format": 1, "cfg": dict(self.cfg), "started": time.time(), "n": 0, "episodes": []}
+        self.rec_path = REPLAY_DIR / name
+        self._nframe = 0
         self.thread = threading.Thread(target=self._run, args=(threads,), daemon=True, name="ops-live")
         self.thread.start()
 
@@ -76,7 +102,34 @@ class LiveSession:
         self.speed = max(0.1, min(20.0, float(x)))
 
     # --------------------------------------------------------------------- yayın
+    def _record(self, obj: dict) -> None:
+        """Gerçek yayın akışının seyreltilmiş kaydı: uzaktan/sonradan izlenebilsin (sahte üretim yok, aynı kareler)."""
+        if self.rec is None:
+            return
+        t = obj.get("type")
+        if t == "layout":
+            self.rec["episodes"].append({"layout": obj, "frames": [], "end": None})
+        elif t == "frame" and self.rec["episodes"]:
+            self._nframe += 1
+            ep = self.rec["episodes"][-1]
+            if (self._nframe % REPLAY_KEEP_EVERY == 0 or obj.get("done") and all(obj["done"])) and self.rec["n"] < REPLAY_MAX_FRAMES:
+                ep["frames"].append(obj)
+                self.rec["n"] += 1
+        elif t == "episode_end" and self.rec["episodes"]:
+            self.rec["episodes"][-1]["end"] = obj
+            self._save_replay()
+
+    def _save_replay(self) -> None:
+        if self.rec is None or self.rec_path is None:
+            return
+        self.rec_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self.rec_path.with_suffix(".tmp")
+        with gzip.open(tmp, "wt", encoding="utf-8", compresslevel=6) as f:
+            json.dump(self.rec, f, separators=(",", ":"))
+        tmp.replace(self.rec_path)
+
     def _publish(self, obj: dict) -> None:
+        self._record(obj)
         data = json.dumps(obj, separators=(",", ":")).encode()
         with self.cond:
             self.seq += 1
@@ -186,7 +239,8 @@ class LiveSession:
                 self._publish(self._frame(cr, ep, i + 1, learn, dt))
                 self._publish({"type": "episode_end", **rec})
                 time.sleep(0.6)
-            self.status = {"state": "durdu" if self.stop_flag.is_set() else "bitti", "episodes": ep}
+            self._save_replay()
+            self.status = {"state": "durdu" if self.stop_flag.is_set() else "bitti", "episodes": ep, "replay": self.rec_path.name if self.rec_path else None}
         except Exception as e:                      # arayüze gerçek hatayı göster
             self.status = {"state": "hata", "error": f"{type(e).__name__}: {e}"}
             self._publish({"type": "error", "error": self.status["error"]})
