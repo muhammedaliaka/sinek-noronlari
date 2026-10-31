@@ -51,7 +51,7 @@ def _alive(pid: int) -> bool:
     except PermissionError:
         return True
     try:                                   # zombi (ölü ama toplanmamış) süreç yaşıyor sayılmaz
-        st = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[0]
+        st = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8").rsplit(")", 1)[1].split()[0]
         return st != "Z"
     except Exception:
         return True
@@ -80,7 +80,7 @@ class JobManager:
     def _load(self) -> None:
         if self.path.exists():
             try:
-                self.state = json.loads(self.path.read_text())
+                self.state = json.loads(self.path.read_text(encoding="utf-8"))
             except Exception:
                 bad = self.path.with_suffix(".bozuk")
                 self.path.replace(bad)
@@ -90,7 +90,7 @@ class JobManager:
 
     def _save(self) -> None:
         tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self.state, ensure_ascii=False, indent=1))
+        tmp.write_text(json.dumps(self.state, ensure_ascii=False, indent=1), encoding="utf-8")
         tmp.replace(self.path)
 
     # ------------------------------------------------------------------ sorgular
@@ -200,7 +200,7 @@ class JobManager:
         t = self.reg[j["test_id"]]
         argv = t.argv(j["params"])
         j["argv"] = argv
-        wrapper = [sys.executable, "-I", "-c", WRAPPER, str(exitp), *argv]
+        wrapper = [sys.executable, "-X", "utf8", "-I", "-c", WRAPPER, str(exitp), *argv]
         kw = {"creationflags": 0x00000200 | 0x00000008} if IS_WIN else {"start_new_session": True}   # yeni süreç grubu / ayrık
         with open(logp, "ab") as lf:
             lf.write(f"\n=== {time.strftime('%F %T')} başlıyor (deneme {j['attempts'] + 1}): {' '.join(argv)}\n".encode())
@@ -251,7 +251,7 @@ class JobManager:
                     popen.poll()
                 if exitp.exists() and (popen is None or popen.poll() is not None):
                     try:
-                        code = int(exitp.read_text().strip())
+                        code = int(exitp.read_text(encoding="utf-8").strip())
                     except ValueError:
                         code = -1
                     j["exit_code"], j["ended"] = code, now()

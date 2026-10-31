@@ -1,6 +1,8 @@
-# Uzak kontrol: arkadaşın (GPU'lu) bilgisayarında sunucu + canlı panel + akıllı kuyruk
+# Uzak kontrol: arkadaşın (GPU'lu) bilgisayarında test ekranı + akıllı kuyruk (sunucusuz; HTTP paneli isteğe bağlı eski yol)
 
-Karar: K-059. Kod: `src/sinek/ops/`. Sınama: `tests/test_ops.py` (62 test: `test_ops.py`, `test_ops_denetim.py`, `test_ops_arayuz.py`). **Bu bir altyapıdır; bilimsel kanıt üretmez.**
+Karar: K-059. Kod: `src/sinek/ops/`. Sınama: `tests/test_ops.py` (71 test: `test_ops.py`, `test_ops_denetim.py`, `test_ops_arayuz.py`). **Bu bir altyapıdır; bilimsel kanıt üretmez.**
+
+> **K-063 (güncel varsayılan): sunucu açılmaz.** Ana yol `python -X utf8 -I -m sinek.ops.ekran --relay origin:ops-relay --auto` — tek konsol penceresi: durum, çalışan iş + ilerleme, sıradaki 5 öneri, canlı oyun (ASCII arena), tuşlarla sıraya ekleme. Hiçbir soket dinlemez (testle sınanır). Uzak erişim yalnız git dalı üzerinden (içeri açık kapı yok). Aşağıdaki HTTP sunucusu/web paneli (`sinek.ops.server`) kod olarak duruyor ve testli, ama kurulum için **gerekmiyor**.
 
 ## 1. Ne yapar (yalnız gerçek veri; sahte yüzde/çizim yok)
 * **Makine durumu:** CPU çekirdeği/yük, RAM, boş disk, GPU adı/belleği/kullanımı (`nvidia-smi` varsa), kod sürümü (commit), PyTorch sürümü.
@@ -12,13 +14,7 @@ Karar: K-059. Kod: `src/sinek/ops/`. Sınama: `tests/test_ops.py` (62 test: `tes
 
 ## 2. Seçilen teknik ve arkadaşın yapacağı (≈10 dk)
 **Teknik (K-060): git yayını.** Sunucu arkadaşın makinesinde yerel çalışır; dışarıya hiçbir port açılmaz. Makine GitHub'daki `ops-relay` dalına kendi durumunu/raporlarını/tekrarlarını yazar, aynı daldan imzalı komutları okur. Ben (uzaktaki ajan) de aynı daldan okur/yazarım. Neden bu: (1) bana açık olan tek yol GitHub; (2) güvenlik duvarı/NAT/CGNAT/uyku-uyanma sorunu yok, çünkü bağlantı hep arkadaşın makinesinden DIŞARI doğru; (3) imza ile korunur, TLS gerekmez; (4) makine kapansa komutlar dalda bekler, açılınca uygulanır; (5) tünel/VPN kurulumu ve hesap paylaşımı gerekmez. Bedeli: gecikme (komut ≈15 sn–1 dk) ve canlı izlemenin uzaktan **kare kare akmaması** — onun yerine canlı izleme her bölümde **tekrar dosyası** (gerçek karelerin seyreltilmiş kaydı, 40 KB/2 bölüm) olarak dala konur; arayüzdeki “Kayıtlı tekrarlar”dan oynatılır. Gerçek zamanlı canlı izleme arkadaşın kendi tarayıcısındaki yerel panelde vardır.
-1. Python ≥3.10, git. NVIDIA sürücüsü varsa CUDA'lı PyTorch'u <https://pytorch.org/get-started/locally/> komutuyla kurun (CPU sürümü de çalışır).
-2. `git clone <depo>` → `git checkout ccr-2e9cee22-nxwnkt` → `pip install -e .` (Windows'ta doğrulayıcı kuyruğu `bash` ister: **WSL2** önerilir).
-3. Depoya **yazma yetkisi** verin (GitHub kişisel erişim jetonu ya da `gh auth login`).
-4. `python3 -I -m sinek.ops.setup --autostart` — her şeyi denetler (torch/CUDA, git yayını gerçek bir deneme turuyla, jeton) ve eksikse ne yapılacağını söyler; Linux'ta açılışta otomatik başlatma kurar (Windows/mac için tek satırlık komut yazar). `--rotate-token` jetonu yeniler.
-5. `scripts/ops_baslat.sh --relay origin:ops-relay` (autostart kurduysanız gerekmez). Panel: `http://127.0.0.1:8765/?token=…`.
-6. Jetonu bana verin (komut imzası için). Sohbete yapıştırdıysanız iş bitince `--rotate-token`.
-7. Bilgisayar uykuya geçmesin. Kapanırsa sunucuyu yeniden başlatmak yeter: işler kaldığı yerden sürer.
+**Arkadaş Windows'taysa (varsayılan senaryo): [`docs/arkadas_kurulum.md`](arkadas_kurulum.md)** — WSL/Linux gerekmez (K-062); bash yok, tüm süreçler UTF-8 kipinde, Görev Zamanlayıcı ile otomatik başlatma. Özet: Python+git kur → depoyu çek → `venv` + `pip install -e .` → `python -X utf8 -I -m sinek.ops.setup --autostart` (denetim + git yayını denemesi + test ekranı otomatik açılışı) → ekranda `1` ve `a` tuşları → jetonu proje sahibine ver. Linux/Mac aynı adımlar (`scripts/ekran_ac.sh --relay origin:ops-relay --auto`).
 
 ## 3. Benim (uzaktaki ajanın) kullanımı
 * Durum + raporlar + tekrarlar: `python3 -I -m sinek.ops.client relay --token T status`
@@ -47,7 +43,7 @@ Komutlar yalnız `src/sinek/ops/registry.py`'deki işleri başlatabilir (keyfi k
 * Canlı izleme tek oturumdur (bir kez bir oyun); bölümleri CPU’da yavaşsa kare hızı düşer (hız çubuğu işe yaramaz, yalnız hızlandırır).
 * O6b/O6c koluyla ilk canlı başlatmada görsel kalibrasyon (`neutral_scale`) bir dakika sürebilir (“kuruluyor” görünür).
 * “Gerileme denetimi (T=2,5)” ve “O6b öğrenme zamanı/işareti denetimi” kayıt defterinde **planlı/engelli** görünür: betikleri henüz yok; yazıldıkça kayda eklenir.
-* Windows’ta `run_o5c_validators.sh` için bash gerekir (WSL2/Git Bash); yerel Windows’ta denenmedi.
+* Windows’a özgü kod yolları (Görev Zamanlayıcı, `ctypes` süreç sorgusu, `taskkill`) bu Linux ortamında **çalıştırılamadı**; yalnız okuma + sahte testlerle sınandı. İlk gerçek Windows çalıştırması `ops.setup` + birim testleri olmalı.
 * Arayüz tarayıcıda (Chromium, masaüstü ve telefon genişliği) bu ortamda görsel olarak denetlendi; başka tarayıcılar denenmedi.
 
 ## 7. Denetim sonuçları (K-061) — arkadaşın makinesi gelmeden önce yapılanlar

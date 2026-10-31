@@ -91,9 +91,9 @@ def main(argv=None) -> None:
     work = Path(tempfile.mkdtemp(prefix="ops_relay_"))
     d = ensure_clone(work / "r", remote, branch or "ops-relay", url=a.url or git(R.ROOT, "remote", "get-url", remote).strip())
     if a.what == "status":
-        print((d / "status.json").read_text() if (d / "status.json").exists() else "status.json yok (sunucu henüz yazmadı)")
+        print((d / "status.json").read_text(encoding="utf-8") if (d / "status.json").exists() else "status.json yok (sunucu henüz yazmadı)")
         for p in sorted((d / "reports").glob("*.md"))[-3:] if (d / "reports").exists() else []:
-            print("\n" + "=" * 70 + f"\n{p.name}\n" + p.read_text()[:6000])
+            print("\n" + "=" * 70 + f"\n{p.name}\n" + p.read_text(encoding="utf-8")[:6000])
         return
     cmd = {"id": uuid.uuid4().hex[:10], "ts": time.time(), "action": a.action, "confirm": a.confirm}
     if a.action == "enqueue":
@@ -110,7 +110,7 @@ def main(argv=None) -> None:
     git(d, "config", "user.email", "sinek-ops-client@users.noreply.github.com")
     for attempt in range(6):          # sunucu aynı anda durum itmiş olabilir: dalı sıfırla, komutu yeniden yaz, yeniden dene (sığ klonda rebase güvenilmez)
         (d / "commands").mkdir(exist_ok=True)
-        (d / "commands" / f"{cmd['id']}.json").write_text(json.dumps(cmd, ensure_ascii=False, indent=1))
+        (d / "commands" / f"{cmd['id']}.json").write_text(json.dumps(cmd, ensure_ascii=False, indent=1), encoding="utf-8")
         git(d, "add", "-A")
         git(d, "commit", "-m", f"ops: komut {cmd['id']} {a.action}")
         try:

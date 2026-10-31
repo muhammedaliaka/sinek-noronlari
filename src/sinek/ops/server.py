@@ -16,6 +16,7 @@ import secrets
 import shutil
 import signal
 import subprocess
+import sys
 import threading
 import time
 from http import HTTPStatus
@@ -41,10 +42,10 @@ def load_or_create_token(explicit: str | None = None) -> str:
     elif os.environ.get("SINEK_OPS_TOKEN"):
         tok = os.environ["SINEK_OPS_TOKEN"]
     elif TOKEN_FILE.exists():
-        tok = TOKEN_FILE.read_text().strip()
+        tok = TOKEN_FILE.read_text(encoding="utf-8").strip()
     else:
         tok = secrets.token_urlsafe(24)
-        TOKEN_FILE.write_text(tok + "\n")
+        TOKEN_FILE.write_text(tok + "\n", encoding="utf-8")
         os.chmod(TOKEN_FILE, 0o600)
     if len(tok) < 16:
         raise SystemExit("jeton en az 16 karakter olmalı")
@@ -75,7 +76,7 @@ def _hardware() -> dict:
     info = {"cpu_count": os.cpu_count(), "load": os.getloadavg() if hasattr(os, "getloadavg") else None, "torch": torch.__version__,
             "cuda": torch.cuda.is_available(), "gpus": [], "uptime_s": round(time.time() - START)}
     try:
-        mem = {k.strip(): int(v.split()[0]) for k, v in (l.split(":", 1) for l in Path("/proc/meminfo").read_text().splitlines())}
+        mem = {k.strip(): int(v.split()[0]) for k, v in (l.split(":", 1) for l in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines())}
         info["ram_gb"] = [round((mem["MemTotal"] - mem["MemAvailable"]) / 1048576, 1), round(mem["MemTotal"] / 1048576, 1)]
     except Exception:
         pass
@@ -367,15 +368,23 @@ def update_code(app: App) -> dict:
             "note": "arayüz/sunucu kodu değiştiyse sunucuyu yeniden başlatın" if before != after else "değişiklik yok"}
 
 
+class OpsHTTPServer(ThreadingHTTPServer):
+    request_queue_size = 256            # varsayılan 5: eşzamanlı sekmeler + canlı akış + uzak istemci bağlantıları düşüyordu (yük testinde %25 zaman aşımı)
+    daemon_threads = True
+    allow_reuse_address = True
+
+
 def make_server(host: str, port: int, token: str, jobs: JobManager | None = None, live: LiveSession | None = None) -> tuple[ThreadingHTTPServer, App]:
     app = App(token, jobs, live)
     handler = type("H", (Handler,), {"app": app})
-    srv = ThreadingHTTPServer((host, port), handler)
-    srv.daemon_threads = True
+    srv = OpsHTTPServer((host, port), handler)
     return srv, app
 
 
 def main(argv=None) -> None:
+    for stream in (sys.stdout, sys.stderr):          # Windows konsolu/yönlendirme varsayılanı UTF-8 değildir (Türkçe, →, ≥ …)
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8765)

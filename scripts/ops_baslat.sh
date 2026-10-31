@@ -5,4 +5,4 @@
 #   scripts/ops_baslat.sh --host 0.0.0.0             # ağdan erişim (TLS yok; yalnız güvenilir ağ/VPN)
 set -u
 cd "$(dirname "$0")/.."
-exec python3 -I -m sinek.ops.server "$@"
+exec python3 -X utf8 -I -m sinek.ops.server "$@"

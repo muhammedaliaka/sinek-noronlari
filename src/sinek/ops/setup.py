@@ -1,7 +1,7 @@
 """Arkadaşın makinesinde tek komutla kurulum denetimi + isteğe bağlı otomatik başlatma:
 
     python3 -I -m sinek.ops.setup                 # denetle (hiçbir şeyi değiştirmez; jeton yoksa üretir)
-    python3 -I -m sinek.ops.setup --autostart     # Linux: systemd kullanıcı servisi yazar (açılışta sunucu + git yayını)
+    python3 -I -m sinek.ops.setup --autostart     # Windows: ekranı oturum açılınca açar; Linux: ekransız systemd servisi
     python3 -I -m sinek.ops.setup --rotate-token  # jetonu yenile (jeton sohbete/başkasına gittiyse işi bitince yenileyin)
 
 Denetler: Python/torch/CUDA, git uzak adresi + dala YAZMA (git yayını gerçek bir deneme turuyla sınanır), jeton, kendi kendine sınama.
@@ -69,15 +69,26 @@ def check_git_relay(spec: str) -> bool:
 
 
 def autostart(relay: str) -> None:
-    if platform.system() != "Linux":
-        cmd = f'schtasks /Create /SC ONLOGON /TN SinekOps /TR "py -3 -I -m sinek.ops.server --relay {relay} --auto" /F' if platform.system() == "Windows" else "launchd/Login Items ile `scripts/ops_baslat.sh --relay …` ekleyin"
-        line(WARN, f"Otomatik başlatma bu işletim sisteminde kendiliğinden kurulmaz. Elle: {cmd}")
+    sysname = platform.system()
+    if sysname == "Windows":
+        # Görev Zamanlayıcı: oturum açılınca TEST EKRANINI (sunucusuz, port yok) görünür bir konsol penceresinde açar.
+        # cwd ayarlanamadığı için küçük bir .bat sarmalayıcı yazılır.
+        bat = ROOT / "results" / "ops" / "ekran_baslat.bat"
+        bat.parent.mkdir(parents=True, exist_ok=True)
+        bat.write_text(f'@echo off\r\ntitle Sinek Test Ekrani\r\ncd /d "{ROOT}"\r\n"{sys.executable}" -X utf8 -I -m sinek.ops.ekran --relay {relay} --auto\r\n', encoding="utf-8")
+        r = subprocess.run(["schtasks", "/Create", "/SC", "ONLOGON", "/TN", "SinekOps", "/TR", f'"{bat}"', "/F"], capture_output=True, text=True)
+        line(OK if r.returncode == 0 else WARN, "Görev Zamanlayıcı görevi 'SinekOps' kuruldu (oturum açılınca test ekranı penceresi açılır). Şimdi açmak için: schtasks /Run /TN SinekOps" if r.returncode == 0
+             else f"görev kurulamadı: {(r.stdout + r.stderr).strip()[:200]} — elle: {bat} dosyasına çift tıklayın")
+        line(WARN, "Windows'ta güç ayarlarından 'uyku'yu kapatın (Ayarlar → Sistem → Güç). Test ekranı penceresi açık kalmalı (kapatırsanız çalışan işler sürer, yeni iş alınmaz).")
+        return
+    if sysname != "Linux":
+        line(WARN, "Otomatik başlatma bu işletim sisteminde kendiliğinden kurulmaz: Oturum Açma Öğeleri'ne `scripts/ekran_ac.sh --relay " + relay + "` ekleyin.")
         return
     unit_dir = Path.home() / ".config" / "systemd" / "user"
     unit_dir.mkdir(parents=True, exist_ok=True)
     (unit_dir / "sinek-ops.service").write_text(
-        f"[Unit]\nDescription=Sinek kontrol sunucusu\nAfter=network-online.target\n\n[Service]\nWorkingDirectory={ROOT}\n"
-        f"ExecStart={sys.executable} -I -m sinek.ops.server --relay {relay} --auto\nRestart=always\nRestartSec=10\n\n[Install]\nWantedBy=default.target\n")
+        f"[Unit]\nDescription=Sinek test ekrani (ekransiz kip, port yok)\nAfter=network-online.target\n\n[Service]\nWorkingDirectory={ROOT}\n"
+        f"ExecStart={sys.executable} -X utf8 -I -m sinek.ops.ekran --headless --relay {relay} --auto\nRestart=always\nRestartSec=10\n\n[Install]\nWantedBy=default.target\n", encoding="utf-8")
     r = subprocess.run("systemctl --user daemon-reload && systemctl --user enable --now sinek-ops.service", shell=True, capture_output=True, text=True)
     line(OK if r.returncode == 0 else WARN, "systemd kullanıcı servisi yazıldı ve başlatıldı" if r.returncode == 0 else f"servis dosyası yazıldı ama etkinleştirilemedi: {r.stderr.strip()[:200]}")
     line(WARN, "Oturum kapansa da çalışsın istiyorsanız bir kez: `loginctl enable-linger $USER`. Bilgisayarın uykuya geçmesini kapatın.")
@@ -100,10 +111,12 @@ def main(argv=None) -> int:
     if a.autostart:
         autostart(a.relay)
     print("\n--- Sonraki adımlar ---")
-    print(f"1) Sunucu: scripts/ops_baslat.sh --relay {a.relay}   (Windows: scripts\\ops_baslat.bat --relay {a.relay})")
-    print(f"2) Panel: http://127.0.0.1:8765/?token={tok}")
-    print("3) Uzaktaki Claude'un komut verebilmesi için JETONU ona verin (sohbete yapıştırdıysanız iş bitince: `python3 -I -m sinek.ops.setup --rotate-token`).")
-    print("4) Panelde önce 'Birim testleri', sonra 'Hızlı demo popülasyonu' işlerini çalıştırın.")
+    py = f'"{sys.executable}" -X utf8 -I -m sinek.ops.ekran --relay {a.relay} --auto'
+    print(f"1) Test ekranı (sunucu yok, port yok; autostart kurmadıysanız elle açın, pencere açık kalmalı): {py}")
+    print("2) Ekranda: 1-5 = önerilen testi sıraya ekle, a = otomatik sıra, g = canlı oyun, q = çık")
+    print(f"   Jeton (yalnız uzaktaki Claude'a verilecek): {tok}")
+    print("3) Uzaktaki Claude'un komut verebilmesi için JETONU ona verin (sohbete yapıştırdıysanız iş bitince: `python -X utf8 -I -m sinek.ops.setup --rotate-token`).")
+    print("4) Ekranda önce 'Birim testleri' (tuş 1), sonra 'Hızlı demo popülasyonu' önerisini ekleyin.")
     return 0 if ok else 1
 
 

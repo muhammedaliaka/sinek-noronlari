@@ -97,7 +97,7 @@ class TestDef:
     title: str
     summary: str
     group: str                         # dogrulayici | gelistirme | kapi | arac | test | planli
-    base: Callable[[dict], list[str]]  # parametrelerden argv (python/bash ile başlar)
+    base: Callable[[dict], list[str]]  # parametrelerden argv (her zaman bu Python ile başlar; bash gerekmez)
     params: tuple = ()
     prereg: str | None = None          # doğrulayıcı koşular için ön-kayıt belgesi (R-1): commit edilmiş olmalı
     requires: tuple = ()               # var olması gereken dosyalar (kök göreli)
@@ -150,7 +150,7 @@ class TestDef:
                             "choices": list(p.choices) if p.kind != "pre" else find_pre_files(), "help": p.help} for p in self.params]}
 
 
-PY = [sys.executable, "-I", "-m"]
+PY = [sys.executable, "-X", "utf8", "-I", "-m"]      # -X utf8: Windows'ta varsayılan kodlama UTF-8 değildir (Türkçe/→/≥ yazdıran betikler çökmesin; -I ortam değişkenlerini yok sayar)
 
 
 def _exists(*rel):
@@ -220,8 +220,8 @@ def _reg() -> dict[str, TestDef]:
         why="O6b çözülmedi (K-058); seçilen yol için tek önceden yazılmış değerle deneme."))
     T.append(TestDef(
         "o5c_pretrain_validator", "O5c — ön-kayıtlı doğrulayıcı (T=2,5; 4 popülasyon)",
-        "docs/odor_o5c_plani.md'ye göre: ön-eğitim 206-209, plastic_t/plastic/frozen kolları, değerlendirme. Kesinleşmiş ölçütler DEĞİŞMEZ; yalnız CPU (K-059).", "dogrulayici",
-        lambda v: ["bash", "scripts/run_o5c_validators.sh", str(v["workers"])],
+        "docs/odor_o5c_plani.md'ye göre: ön-eğitim 206-209, plastic_t/plastic/frozen kolları, değerlendirme. Kesinleşmiş ölçütler DEĞİŞMEZ; yalnız CPU (K-059). Windows/Linux/Mac: bash gerekmez (K-062).", "dogrulayici",
+        lambda v: PY + ["sinek.ops.o5c_kuyruk", "--workers", str(v["workers"])],
         params=(Param("workers", "Paralel işçi", "int", 4, 1, 32, help="CPU çekirdek sayısına göre"),),
         prereg="docs/odor_o5c_plani.md", done_when=o5c_done, progress=o5c_progress, resumable=True, validator=True, priority=20,
         cost="saatler (CPU, 4 işçi ≈ 10-20 sa tahmin)", gpu="yok",

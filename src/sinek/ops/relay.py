@@ -102,13 +102,13 @@ class Relay:
 
     def load_acks(self) -> dict:
         try:
-            return json.loads(self.acks_path().read_text())
+            return json.loads(self.acks_path().read_text(encoding="utf-8"))
         except Exception:
             return {}
 
     def save_acks(self, acked: dict) -> None:
         tmp = self.acks_path().with_suffix(".tmp")
-        tmp.write_text(json.dumps(acked))
+        tmp.write_text(json.dumps(acked), encoding="utf-8")
         tmp.replace(self.acks_path())
 
     def remote_head(self) -> str | None:
@@ -163,11 +163,11 @@ class Relay:
     def cycle_once(self) -> None:
         d = ensure_clone(self.dir, self.remote, self.branch, self.url)
         st_path = d / "status.json"
-        prev = json.loads(st_path.read_text()) if st_path.exists() else {}
+        prev = json.loads(st_path.read_text(encoding="utf-8")) if st_path.exists() else {}
         acked: dict = {**prev.get("acked", {}), **self.load_acks()}      # yerel kayıt itme reddedilse bile komutun ikinci kez uygulanmasını önler
         for p in sorted((d / "commands").glob("*.json")) if (d / "commands").exists() else []:
             try:
-                cmd = json.loads(p.read_text())
+                cmd = json.loads(p.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 continue
             if not isinstance(cmd, dict):
@@ -198,12 +198,12 @@ class Relay:
         if sig == self.last_sig and now - self.last_push < HEARTBEAT and prev:
             return                                               # değişen yok: boşuna commit yok
         status["pushes"] = int(prev.get("pushes", 0)) + 1
-        st_path.write_text(json.dumps(status, ensure_ascii=False, indent=1, default=str))
+        st_path.write_text(json.dumps(status, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
         git(d, "add", "-A")
         if git(d, "status", "--porcelain").strip():
             if status["pushes"] > PRUNE_AFTER:                    # geçmişi sıkıştır: tek commit, zorla it (okunmamış komut kaybolabilir; istemci ack'e bakar)
                 status["pushes"] = 1
-                st_path.write_text(json.dumps(status, ensure_ascii=False, indent=1, default=str))
+                st_path.write_text(json.dumps(status, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
                 git(d, "checkout", "--orphan", "_yeni")
                 git(d, "add", "-A")
                 git(d, "commit", "-m", "ops: sıkıştırılmış durum")

@@ -657,7 +657,7 @@ def test_setup_autostart_writes_valid_systemd_unit(tmp_path, monkeypatch):
     monkeypatch.setattr(SU.subprocess, "run", lambda *a, **k: calls.append(a) or subprocess.CompletedProcess(a, 0, "", ""))
     SU.autostart("origin:ops-relay")
     unit = (tmp_path / ".config/systemd/user/sinek-ops.service").read_text()
-    assert f"WorkingDirectory={R.ROOT}" in unit and "sinek.ops.server --relay origin:ops-relay --auto" in unit and "Restart=always" in unit
+    assert f"WorkingDirectory={R.ROOT}" in unit and "sinek.ops.ekran --headless --relay origin:ops-relay --auto" in unit and "Restart=always" in unit
     assert "WantedBy=default.target" in unit and calls and "systemctl --user" in calls[0][0]
 
 
@@ -666,3 +666,111 @@ def test_setup_without_git_remote_reports_clear_error(tmp_path, monkeypatch, cap
     monkeypatch.setattr(SU, "ROOT", tmp_path)                  # git deposu olmayan klasör
     assert SU.check_git_relay("origin:ops-relay") is False
     assert "git uzak adresi" in capsys.readouterr().out
+
+
+# =========================================================================== Windows uyumu (K-062): bash yok, UTF-8, çapraz platform kuyruk
+def test_no_registered_command_needs_bash_and_all_run_in_utf8_mode():
+    for t in R.REGISTRY.values():
+        if t.disabled_reason:
+            continue
+        vals = {p.name: (p.default if p.kind != "pre" else "results/x.npz") for p in t.params}
+        argv = t.argv(vals)
+        assert argv[0] == sys.executable and "bash" not in argv[:3]
+        assert argv[1:4] == ["-X", "utf8", "-I"], argv[:5]            # Windows varsayılan kodlaması UTF-8 değil
+
+
+def test_all_text_io_in_ops_is_explicit_utf8():
+    """Windows'ta open()/read_text()/write_text() varsayılanı yerel kodlamadır (cp1252/cp1254): Türkçe, →, ≥ yazılırken çöker."""
+    import re
+    bad = []
+    for f in sorted((R.ROOT / "src" / "sinek" / "ops").glob("*.py")):
+        lines = f.read_text(encoding="utf-8").splitlines()
+        for no, l in enumerate(lines, 1):
+            window = " ".join(lines[no - 1:no + 3])                       # çok satırlı çağrılar
+            if re.search(r"\.(read_text|write_text)\(", l) and "encoding=" not in window:
+                bad.append(f"{f.name}:{no}: {l.strip()[:80]}")
+            if re.search(r"\bopen\(", l) and "encoding=" not in l and not re.search(r"""['"][rwa]b['"]|"ab"|"rb"|"wb"|\+ "b"|\['"]w['"]\)\.write""", l):
+                if "WRAPPER" not in l and "sys.argv" not in l and "job[" not in l:
+                    bad.append(f"{f.name}:{no}: {l.strip()[:80]}")
+    assert not bad, "\n".join(bad)
+
+
+def test_o5c_queue_plan_matches_preregistered_structure(tmp_path):
+    from sinek.ops import o5c_kuyruk as K
+    s0, s1, s2 = K.plan()
+    assert (len(s0), len(s1), len(s2)) == (4, 4 * (3 * 8 + 1), 4)
+    pops = {j["argv"][-1] for j in s0}
+    assert pops == {f"results/odor_val/pre_s{p}.npz" for p in ("206", "207", "208", "209")}
+    seeds = {j["argv"][j["argv"].index("--seed") + 1] for j in s1}
+    assert seeds == {"274", "275", "276", "277"}
+    arms = [j["argv"][j["argv"].index("--only-arms") + 1] for j in s1]
+    assert arms[:32] == ["plastic_t"] * 32 and arms[-4:] == ["reference"] * 4 and set(arms) == {"plastic_t", "plastic", "frozen", "reference"}
+    for j in s1 + s2:                                                  # her iş ön-kayıtlı O5c kipinde ve tek iş parçacığında
+        assert "--o5c" in j["argv"] and j["argv"][j["argv"].index("--threads") + 1] == "1"
+    # ön-eğitim popülasyonu ↔ oyun tohumu eşleşmesi (274↔206 … 277↔209)
+    for j in s1 + s2:
+        seed = j["argv"][j["argv"].index("--seed") + 1]
+        pre = j["argv"][j["argv"].index("--pre") + 1]
+        assert pre == f"results/odor_val/pre_s{int(seed) - 68}.npz"
+
+
+def test_o5c_queue_skips_finished_resumes_and_reports_failures(tmp_path):
+    from sinek.ops import o5c_kuyruk as K
+    stages = K.plan()
+    done = tmp_path / "results/o5_val/c_s274"
+    done.mkdir(parents=True)
+    (done / "results.json").write_text("{}")
+    calls, said = [], []
+
+    def fake(job, root, say):
+        if (root / job["skip_if"]).exists():
+            return 0
+        calls.append(job["name"])
+        return 3 if job["name"] == "275 frozen 2" else 0
+
+    code = K.execute(stages, 4, root=tmp_path, say=said.append, runner=fake)
+    assert code == 1 and any("275 frozen 2" in m and "BAŞARISIZ" in m for m in said)
+    assert not any(n.startswith("274 ") for n in calls if not n.startswith("değerlendirme") and not n.startswith("ön-eğitim"))   # bitmiş tohum atlandı
+    assert len(calls) == 108 - 25 - 1 + 0 or len(calls) > 70           # kalan işler hata sonrası da sürdü
+    assert any(n.startswith("değerlendirme 277") for n in calls)       # son aşamaya ulaşıldı
+
+
+def test_o5c_run_job_real_subprocess_skip_log_modes(tmp_path):
+    from sinek.ops import o5c_kuyruk as K
+    job = {"name": "x", "argv": [sys.executable, "-c", "print('merhaba ı → ≥')"], "log": "l/x.log", "log_mode": "a", "skip_if": "bitti.txt", "mkdir": "d"}
+    msgs = []
+    assert K.run_job(job, tmp_path, msgs.append) == 0 and K.run_job(job, tmp_path, msgs.append) == 0
+    assert (tmp_path / "l/x.log").read_text(encoding="utf-8").count("merhaba") == 2        # 'a' kipi: kontrol noktalı işte günlük birikir
+    (tmp_path / "bitti.txt").write_text("1")
+    assert K.run_job(job, tmp_path, msgs.append) == 0 and "atla x (bitti)" in msgs[-1]
+    bad = dict(job, argv=[sys.executable, "-c", "import sys;sys.exit(5)"], skip_if="yok.txt")
+    assert K.run_job(bad, tmp_path, msgs.append) == 5
+
+
+def test_setup_windows_autostart_writes_bat_and_schedules_task(tmp_path, monkeypatch):
+    from sinek.ops import setup as SU
+    monkeypatch.setattr(SU.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(SU, "ROOT", tmp_path)
+    calls = []
+    monkeypatch.setattr(SU.subprocess, "run", lambda a, **k: calls.append(a) or subprocess.CompletedProcess(a, 0, "", ""))
+    SU.autostart("origin:ops-relay")
+    bat = (tmp_path / "results/ops/ekran_baslat.bat").read_bytes().decode("utf-8")
+    assert "\r\n" in bat and f'cd /d "{tmp_path}"' in bat and "-X utf8 -I -m sinek.ops.ekran --relay origin:ops-relay --auto" in bat
+    assert calls[0][0] == "schtasks" and "/SC" in calls[0] and "ONLOGON" in calls[0] and str(tmp_path / "results/ops/ekran_baslat.bat") in calls[0][-2]
+
+
+def test_windows_launcher_has_no_bash_and_finds_python():
+    bat = (R.ROOT / "scripts" / "ops_baslat.bat").read_text(encoding="utf-8")
+    assert "bash" not in bat.replace("bash/WSL", "") and "-X utf8 -I -m sinek.ops.server" in bat and ".venv" in bat
+
+
+def test_server_main_uses_utf8_streams():
+    src = (R.ROOT / "src/sinek/ops/server.py").read_text(encoding="utf-8")
+    assert 'stream.reconfigure(encoding="utf-8"' in src
+
+
+def test_registry_o5c_command_is_runnable_python_module():
+    t = R.REGISTRY["o5c_pretrain_validator"]
+    argv = t.argv(t.build_params({"workers": 2})) + ["--dry-run"]
+    r = subprocess.run(argv, capture_output=True, text=True, cwd=R.ROOT, timeout=60)
+    assert r.returncode == 0 and r.stdout.count("aşama 1 |") == 100
