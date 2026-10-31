@@ -175,4 +175,21 @@ def eval_o5b(h: dict, thr: Thr, extra_gates: dict | None = None, blocks=O5_BLOCK
         desc["E2_topluluk_net_tercih"] = _superior(nen[:, cols], npl[:, cols], len(cols), thr, delta=delta_np, seed=10)
     return {**_result(gates, crit), "descriptive": desc}
 
-EVALUATORS = {"O1": eval_o1, "O2": eval_o2, "O3": eval_o3, "O4a": eval_o4a, "O4c": eval_o4c, "SC": eval_scale, "O5": eval_o5, "O5b": eval_o5b}
+
+def eval_o5c(h: dict, thr: Thr, extra_gates: dict | None = None, blocks=O5_BLOCKS, delta_np: float = 0.06, delta_r: float = 0.04, delta_abs: float = 0.10) -> dict:
+    """O5c (docs/odor_o5c_plani.md; K-048/K-056): DAN hedefi T=2,5'in (kol `plastic_t`) T=0,6'ya (kol `plastic`) karşı tek-öğrenicili kazancı. Girdi h: plastic, plastic_t, frozen, reference ve net_* (O5b ile aynı biçim).
+    Kapı: referans geç bloklarda ödül oranı ≥ ref_min.
+    T1 (seçicilik kazancı): plastic_t − plastic net tercih, iki geç blok birlikte ≥ delta_np.
+    T2 (ödül kazancı): plastic_t − plastic ödül oranı, iki geç blok birlikte ≥ delta_r.
+    T3 (seçicilik korunuyor): plastic_t − frozen net tercih ≥ delta_abs (O5b N1 ile aynı mutlak ölçüt)."""
+    (a0, a1), (b0, b1) = blocks
+    cols = np.r_[a0:a1, b0:b1]
+    gates = {"referans_odul>=ref_min": bool(np.asarray(h["reference"])[:, cols].mean() >= thr.ref_min), **(extra_gates or {})}
+    npl, nt, nfr = (np.asarray(h[k]) for k in ("net_plastic", "net_plastic_t", "net_frozen"))
+    rpl, rt = np.asarray(h["plastic"]), np.asarray(h["plastic_t"])
+    crit = {"T1_secicilik_kazanci": _superior(nt[:, cols], npl[:, cols], len(cols), thr, delta=delta_np, seed=11),
+            "T2_odul_kazanci": _superior(rt[:, cols], rpl[:, cols], len(cols), thr, delta=delta_r, seed=12),
+            "T3_secicilik_mutlak": _superior(nt[:, cols], nfr[:, cols], len(cols), thr, delta=delta_abs, seed=13)}
+    return {**_result(gates, crit), "descriptive": {}}
+
+EVALUATORS = {"O1": eval_o1, "O2": eval_o2, "O3": eval_o3, "O4a": eval_o4a, "O4c": eval_o4c, "SC": eval_scale, "O5": eval_o5, "O5b": eval_o5b, "O5c": eval_o5c}

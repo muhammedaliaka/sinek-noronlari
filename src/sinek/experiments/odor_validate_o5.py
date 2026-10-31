@@ -27,6 +27,8 @@ from .odor_validate_s import _part
 
 CHUNK_STRIDE = 1000
 O5B_ENS = (4, 0.04)         # docs/odor_o5b_plani.md: plastic_ens = K 4, τ_valence 0,04
+O5C_COPIES = 4              # docs/odor_o5c_plani.md: 24 canlı × 4 kopya = 96 yaşam / popülasyon (güç analizi §7)
+O5C_T = 2.5                 # docs/odor_o5c_plani.md: plastic_t = DAN hedefi reward_target 2,5 (tek öğrenici)
 KEYS = ("slot", "got", "better")
 ARM_DEFS = {"plastic": ("naive_plastic", True), "frozen": ("naive", False), "reference": ("reference", False)}   # kol → (oyun kolu, öğrenme açık mı)
 
@@ -168,6 +170,7 @@ def main(argv=None) -> dict | None:
     ap.add_argument("--p-lo", type=float, default=0.2)
     ap.add_argument("--chunks", type=int, default=None, help="varsayılan 4 (O5) / 8 (--o5b)")
     ap.add_argument("--o5b", action="store_true", help="O5b tasarımı (docs/odor_o5b_plani.md): plastic_ens (K=4, τ=0,04) kolu dahil, O5b değerlendirici; ön-kayıtlı doğrulayıcıda kullanılır")
+    ap.add_argument("--o5c", action="store_true", help="O5c tasarımı (docs/odor_o5c_plani.md): plastic_t (T=2,5) kolu dahil, O5c değerlendirici; ön-kayıtlı doğrulayıcı")
     ap.add_argument("--plastic-scale", type=float, default=1.0)
     ap.add_argument("--delta", type=float, default=0.10)
     ap.add_argument("--ref-min", type=float, default=0.60)
@@ -189,11 +192,15 @@ def main(argv=None) -> dict | None:
         if a.ens_k != 1 or a.ens_tau is not None:
             raise SystemExit("--o5b ens ayarlarını sabitler (K=4, τ=0,04); --ens-k/--ens-tau ile birlikte verilemez")
         a.ens_k, a.ens_tau = O5B_ENS
-    a.chunks = a.chunks or (8 if a.o5b else 4)
+    if a.o5c:
+        if a.o5b or a.ens_k != 1 or a.ens_tau is not None or a.plastic_t is not None:
+            raise SystemExit("--o5c T'yi sabitler (2,5) ve --o5b/--ens-*/--plastic-t ile birlikte verilemez")
+        a.plastic_t, a.copies = O5C_T, O5C_COPIES
+    a.chunks = a.chunks or (8 if (a.o5b or a.o5c) else 4)
     ens = a.ens_k > 1 or a.ens_tau is not None
     if ens and not (a.pilot or a.o5b):
         raise SystemExit("--ens-k/--ens-tau geliştirme seçenekleridir: yalnız --pilot ile (ön-kayıtlı doğrulayıcıda yalnız --o5b)")
-    if a.plastic_t is not None and not a.pilot:
+    if a.plastic_t is not None and not (a.pilot or a.o5c):
         raise SystemExit("--plastic-t geliştirme seçeneğidir: yalnız --pilot ile (K-048; doğrulayıcı için ayrı ön-kayıt)")
     if a.threads:
         torch.set_num_threads(a.threads)
@@ -211,7 +218,7 @@ def main(argv=None) -> dict | None:
     if only or only_chunks is not None:
         return None
     blocks = blocks_for(a.episodes, a.switch)
-    ev = evaluate(res, thr, blocks, "O5b" if a.o5b else "O5")
+    ev = evaluate(res, thr, blocks, "O5b" if a.o5b else ("O5c" if a.o5c else "O5"))
     meta = {"stamp": "**PİLOT — kanıt değildir.**" if a.pilot else "Doğrulayıcı koşu.", "pre": a.pre, "pre_sha": _sha(a.pre), "git": _git_head(), "switch": a.switch, "blocks": blocks}
     text = report(a.seed, res, ev, thr, meta, blocks)
     if ens and not a.o5b:

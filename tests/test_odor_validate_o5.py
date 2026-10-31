@@ -78,3 +78,45 @@ def test_optional_plastic_t_arm_pilot_only_default_unchanged_and_same_as_plastic
     assert not np.array_equal(base["plastic"]["slot"], hi["plastic_t"]["slot"]) or not np.array_equal(base["plastic"]["got"], hi["plastic_t"]["got"])
     with pytest.raises(SystemExit):
         V5.main(["--pre", "yok.npz", "--seed", "260", "--out", str(tmp_path / "o"), "--plastic-t", "2.5"])
+
+
+def _synth_o5c(rng, n=96, T=40, good=(0.50, 0.62, 0.75), contact=(0.50, 0.65, 0.80), p_hi=0.8, p_lo=0.2):
+    """frozen / plastic / plastic_t sentetik yaşam verisi (yaşam, bölüm): iyi-koku seçimi ve temas olasılıkları kol başına verilir."""
+    h = {"reference": (rng.random((n, T)) < 0.9).astype(int)}
+    for arm, g, c in zip(("frozen", "plastic", "plastic_t"), good, contact):
+        touch = rng.random((n, T)) < c
+        pick_good = rng.random((n, T)) < g
+        net = np.where(touch, np.where(pick_good, 1, -1), 0)
+        h["net_" + arm] = net
+        h[arm] = (touch & (rng.random((n, T)) < np.where(pick_good, p_hi, p_lo))).astype(int)
+    return h
+
+
+def test_eval_o5c_zero_known_and_approach_only():
+    from sinek.experiments.odor_eval import EVALUATORS, Thr
+    rng = np.random.default_rng(0)
+    thr = Thr(delta=0.10, ref_min=0.60, n_boot=600, n_perm=600)
+    def rate(n=20, **kw):
+        out = [EVALUATORS["O5c"](_synth_o5c(rng, **kw), thr) for _ in range(n)]
+        return {k: float(np.mean([o["criteria"][k]["passed"] for o in out])) for k in out[0]["criteria"]}
+    zero = rate(good=(0.5, 0.62, 0.62), contact=(0.5, 0.65, 0.65))                         # plastic_t = plastic: kazanç yok
+    assert zero["T1_secicilik_kazanci"] <= 0.1 and zero["T2_odul_kazanci"] <= 0.1
+    known = rate()                                                                         # beklenen etki
+    assert min(known.values()) >= 0.9
+    approach = rate(good=(0.5, 0.62, 0.5), contact=(0.5, 0.65, 0.95))                      # yalnız yaklaşma artefaktı (seçim yazı-tura)
+    assert approach["T1_secicilik_kazanci"] <= 0.1 and approach["T3_secicilik_mutlak"] <= 0.1
+
+
+def test_o5c_mode_fixes_t_and_ozet_rules(tmp_path):
+    for bad in (["--o5c", "--o5b"], ["--o5c", "--ens-k", "2"], ["--o5c", "--plastic-t", "2.5"], ["--o5c", "--pilot", "--seed", "260"]):
+        with pytest.raises(SystemExit):
+            V5.main(["--pre", "yok.npz", "--seed", "260", "--out", str(tmp_path / "o"), *bad])
+    assert V5.O5C_T == 2.5
+    from sinek.experiments import o5c_ozet as OZ
+    ok = {"eval": {"gates_ok": True, "criteria": {k: {"passed": True} for k in OZ.CRITS}}}
+    bad1 = {"eval": {"gates_ok": True, "criteria": {k: {"passed": k != "T1_secicilik_kazanci"} for k in OZ.CRITS}}}
+    assert OZ.verdict({s: ok for s in OZ.SEEDS}) == "BAŞARILI"
+    assert OZ.verdict({s: (bad1 if i < 1 else ok) for i, s in enumerate(OZ.SEEDS)}) == "BAŞARILI"            # 3/4 yeter
+    assert OZ.verdict({s: (bad1 if i < 2 else ok) for i, s in enumerate(OZ.SEEDS)}) == "BAŞARISIZ"
+    assert OZ.verdict({274: ok, 275: ok, 276: None, 277: None}) == "BEKLİYOR"
+    assert OZ.verdict({274: {"eval": {"gates_ok": False, "criteria": ok["eval"]["criteria"]}}, 275: None, 276: None, 277: None}) == "BAŞARISIZ"
