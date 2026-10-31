@@ -58,6 +58,11 @@ Açık ipuçları: (i) zorunlu temasta görsel yol koku yolundan 1–7× sert ve
 
 TAHMİN-2 (nötrleştirilmiş görsel, aynı tohum 140; koşudan önce): görsel yaratık artık temas edebilir; naive_plastic NP son blokta ∈ [+0,05, +0,30] (belirsizlik geniş: kalan innate fark X≠Y ve VPN→KC zayıflığı);
 kör kol |NP| < 0,10. Görsel NP < +0,05 ise "görsel öğrenme bu hâliyle yetersiz" — ayar sürüsü yapılmaz (E-08).
+TAHMİN-9 (2026-10-31, koşu BİTMEDEN yazıldı; K-058 açık ipucu iii: T=2,5'in ilk blokta yanlış işareti sistematik mi, gürültü mü?): AYNI ayar (T=2,5 + refleks 10, 24×2, pop. 102), YENİ geliştirme tohumu 145, 8 bölüm, kollar naive_plastic + naive.
+ (a) Yanlış işaret SİSTEMATİK (zamanlama/işaret kusuru) ise: naive_plastic blok-1 NP < −0,10 yine; öğrenmesiz naive blok-1 NP ≈ 0 (|NP| < 0,10) — yani işaret öğrenmeden gelir.
+ (b) Doğuştan görsel asimetri (X≠Y) ise: naive blok-1 NP de < −0,10 (aynı işaret).
+ (c) Gürültü ise: naive_plastic blok-1 |NP| < 0,10.
+ Karar: (a) → kapalı çevrimde öğrenme anı denetimi (adım düzeyinde günlük); (b) → T'nin etkisi ayrı değil, doğuştan asimetri; (c) → "yanlış işaret" ipucu geçersiz, K-058 ipucu (iii) kapatılır.
 """
 from __future__ import annotations
 
