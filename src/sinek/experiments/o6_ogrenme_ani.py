@@ -97,6 +97,18 @@ def main(argv=None) -> str:
             x = E[m]
             good = (x[:, 3] > 0) if slot == 0 else (x[:, 3] < 0)
             L.append(f"| {lo + 1}-{hi} | {name} | {int(m.sum())} | doğru işaret **{good.mean():.2f}** | {np.median(x[:, 3]):+.3g} | {np.median(x[:, 6]):+.3f} | {np.nanmean(x[:, 7]):+.3f} | {np.nanmean(x[:, 8]):+.3f} | {np.median(x[:, 9]):.0f} |")
+    # geçiş tablosu: aynı yaşamın bir önceki bölümde İLK temas ettiği yuva → bu bölümde ilk temas (yuva: 0 güvenli, 1 tuzak, −1 yok); NP katkısı
+    n_b = int(E[:, 1].max()) + 1
+    sl = np.full((a.episodes, n_b), -9.0)
+    for r in E:
+        sl[int(r[0]), int(r[1])] = r[2]
+    L += ["", "**Geçiş tablosu** (satır: önceki bölümde ilk temas; sütun: sonraki bölümde ilk temas; yüzde satır içi):", "", "| önceki → sonraki | güvenli | tuzak | yok | n |", "|---|---|---|---|---|"]
+    for prev, name in ((0, "güvenli(+)"), (1, "tuzak(−)"), (-1, "temas yok")):
+        nxt = [sl[e + 1, b] for e in range(a.episodes - 1) for b in range(n_b) if sl[e, b] == prev and sl[e + 1, b] > -9]
+        if nxt:
+            nxt = np.array(nxt)
+            L.append(f"| {name} | {(nxt == 0).mean():.2f} | {(nxt == 1).mean():.2f} | {(nxt < 0).mean():.2f} | {len(nxt)} |")
+    L += ["", "Bölüm başına NP (güvenli − tuzak oranı, tüm elemanlar): " + ", ".join(f"{((sl[e] == 0).mean() - (sl[e] == 1).mean()):+.2f}" for e in range(a.episodes))]
     text = "\n".join(L) + "\n"
     print(text)
     if a.out:
