@@ -95,6 +95,7 @@ class ConnectomeBrainConfig:
     vis_tuning_seed: int = 0         # ayar matrisinin tohumu (popülasyon sabiti; canlı tohumundan bağımsız)
     vis_tuning_density: float = 0.10  # (K-053; ilk tasarım 0,4) VPN başına özellik kanalına bağlanma olasılığı
     vis_kc_gain: float = 8.0         # VPN->KC ağırlık çarpanı (K-053; 47 VPN, yüzlerce PN'e karşı; görsel KC kodu koku koduna kıyasla ≈6× dardı); 1 = PN ile aynı ölçek
+    vis_innate_flat: bool = False    # True: görsel KC'lerin doğuştan KC->MBON ağırlıkları görsel KC ortalamasına eşitlenir (K-055); False = bağlantı verisi olduğu gibi
     vis_avoid_scale: float = 1.0     # görsel KC (VPN girdili) -> 'kaçın' sınıfı MBON sinapslarının çarpanı; eğitimsiz ağın görsel girdiye nötr olması için `games.vis_calibration.neutral_scale` ile kalibre edilir (E-17, K-051); 1 = kalibrasyonsuz
 
     # Kenyon hücreleri ve APL (gerçek PN->KC, KC->APL, APL->KC sinaps sayılarıyla)

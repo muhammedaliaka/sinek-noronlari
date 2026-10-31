@@ -92,6 +92,11 @@ class ConnectomeBrain:
         u = t(u_np)
         app, avo = u.clamp(min=0), (-u).clamp(min=0)
         self.cls_w = torch.stack([app / app.sum(), avo / avo.sum()], dim=1)   # (n_mbon, 2)
+        if self.n_vis > 0 and cfg.vis_innate_flat:                 # K-055: görsel KC'lerin doğuştan KC->MBON çıkışı KC'ye özgü olmasın (desene bağlı rastgele yönlendirme yok); öğrenme bunun üstüne kurulur (elle yazılmış, R-11)
+            vf = t(np.abs(d.w_vpn_kc)).sum(0) > 0
+            m = self.W0[vf].mean(0, keepdim=True)
+            self.W0 = self.W0.clone(); self.W0[vf] = m
+            self.W = self.W.clone(); self.W[:, vf] = m
         if self.n_vis > 0 and cfg.vis_avoid_scale != 1.0:          # eğitimsiz ağın görsel girdiye nötr olması (kalibrasyon; elle yazılmış, R-11)
             vis_kc = t(np.abs(d.w_vpn_kc)).sum(0) > 0                # (n_kc,) VPN girdili KC'ler
             S = torch.ones(self.n_kc, self.n_mbon, device=self.device)

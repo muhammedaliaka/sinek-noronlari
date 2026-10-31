@@ -23,6 +23,16 @@ K-053 (seçilen tasarım, KC kodu ölçütüyle; oyun yok): vis_tuning_density 0
 TAHMİN-3 (koşudan önce, aynı tohum 140, κ yeniden kalibre): naive_plastic NP son 3 blokta ort. ∈ [+0,05, +0,30] ve son blokta temas-yok < 0,90 (çöküş yok); kör kol |NP| < 0,10.
 Yanlışlanma: NP < +0,05 ya da temas-yok ≥ 0,95 → "görsel öğrenme bu tasarımda çalışmıyor"; ayar sürüsü yapılmaz, mekanizma yeniden teşhis edilir (E-08).
 
+SONUÇ-3 (O6b, tohum 140, K-053 tasarımı + düzeltilmiş κ=0,6115): TAHMİN-3 YANLIŞ — naive_plastic NP ≈0 (−0,03…+0,01), temas-yok 0,87→0,97; kör kol temas-yok ≈0,68; **öğrenmesiz görsel-açık kol (naive) temas-yok 0,84** (kör 0,68): görsel
+girdi, öğrenme olmadan da ilk temas oranını yarıya indiriyor → öğrenme olayı yok (K-054). G-V2 (zorunlu temas) görsel öğrenme kapasitesini sağlam gösterdi (Δ +0,83 vs koku +0,44, boş +0,01). Göz başına valans kontrastı ölçümü: görsel kontrast ±0,02, koku kontrastıyla (±0,02) aynı büyüklükte
+ama KC'ye özgü rastgele işaretli (örn. Y sol göz +0,021) → odor yaklaşmasını bozuyor.
+K-055 (uygulanan): `vis_innate_flat` — görsel KC'lerin doğuştan KC→MBON ağırlıkları görsel-KC ortalamasına eşitlenir (desene bağlı rastgele yönlendirme kalkar; öğrenme üstüne kurulur; κ yeniden kalibre).
+TAHMİN-4 (koşudan önce, tohum 140): (a) naive (öğrenmesiz, görsel açık) temas-yok ≤ 0,75 (kör ≈0,68'e yaklaşır); (b) naive_plastic NP son 3 blokta ort. ∈ [+0,05, +0,30], son blokta temas-yok < 0,90.
+Yanlışlanma: (a) temas-yok > 0,80 ise yönlendirme hipotezi yanlış; (b) NP < +0,05 → görsel yol bu hâliyle O6b'yi çözmüyor; ayar sürüsü yapılmaz (E-08).
+
+SONUÇ-4 (K-055, tohum 140, 24 yaşam×2, 8 bölüm, ÖĞRENMESİZ, `vis_innate_flat` açık): temas-yok görsel 0,833 vs kör 0,620 → TAHMİN-4(a) YANLIŞ (≤0,75 beklenmişti); KC'ye özgü doğuştan ağırlık yönlendirmesi nedeni DEĞİL.
+`vis_innate_flat` bu yüzden varsayılan kapalı ve fabrika tarafından AÇILMAZ (seçenek olarak kodda kalır). O6b'de görsel açıkken temas oranını neyin yarıya indirdiği AÇIK SORU (K-055).
+
 TAHMİN-2 (nötrleştirilmiş görsel, aynı tohum 140; koşudan önce): görsel yaratık artık temas edebilir; naive_plastic NP son blokta ∈ [+0,05, +0,30] (belirsizlik geniş: kalan innate fark X≠Y ve VPN→KC zayıflığı);
 kör kol |NP| < 0,10. Görsel NP < +0,05 ise "görsel öğrenme bu hâliyle yetersiz" — ayar sürüsü yapılmaz (E-08).
 """
