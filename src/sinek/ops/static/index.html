@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sinek Kontrol Paneli</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#4b5563;--line:#d5dae1;--good:#0072B2;--bad:#D55E00;--neu:#6b7280;--ok:#117a3d;--warn:#8a5a00;--err:#b42318;--acc:#1f4fd8;--accfg:#fff;--canvas:#fbfbfc}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1318;--card:#171c23;--ink:#e8ecf1;--mut:#a5afbd;--line:#2c3440;--good:#56b4e9;--bad:#f0914f;--neu:#9aa4b2;--ok:#4cc27f;--warn:#e0b04a;--err:#ff7b6e;--acc:#7aa2ff;--accfg:#0b1020;--canvas:#10151b}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:16px;border-bottom:1px solid var(--line);background:var(--card)}h1{font-size:1.3rem;margin:0 0 6px}h2{font-size:1.1rem;margin:0 0 10px}h3{font-size:1rem;margin:0}
+main{max-width:1200px;margin:0 auto;padding:16px;display:grid;gap:16px}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.strip{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--mut);font-size:.9rem}.strip b{color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.grow{flex:1}
+button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.p{background:var(--acc);color:var(--accfg);border-color:var(--acc)}button.d{border-color:var(--err);color:var(--err)}button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+input,select{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);max-width:100%}
+.job{border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:8px}.job .h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.tag{font-size:.8rem;padding:1px 8px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+.s-running{color:var(--acc)}.s-done{color:var(--ok)}.s-failed,.s-interrupted{color:var(--err)}.s-queued{color:var(--warn)}.s-cancelled{color:var(--mut)}
+.bar{height:12px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:6px}.bar>i{display:block;height:100%;background:var(--acc)}
+.mut{color:var(--mut);font-size:.9rem}pre{background:var(--canvas);border:1px solid var(--line);border-radius:8px;padding:8px;overflow:auto;max-height:260px;font-size:.8rem;margin:6px 0 0;white-space:pre-wrap}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.cell{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--canvas)}canvas{width:100%;height:auto;display:block;background:var(--canvas)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.9rem;margin:8px 0}.legend span{display:inline-flex;align-items:center;gap:6px}
+form.f{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));margin-top:8px}form.f label{display:grid;gap:2px;font-size:.9rem}
+details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-top:8px}summary{cursor:pointer;font-weight:600}
+.err{color:var(--err)}.ok{color:var(--ok)}table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{border-bottom:1px solid var(--line);padding:4px 8px;text-align:left}
+#toast{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;display:none;max-width:90vw}
+</style>
+</head>
+<body>
+<header>
+  <h1>Sinek Kontrol Paneli <span class="mut" id="conn" role="status" aria-live="polite">bağlanıyor…</span></h1>
+  <div class="strip" id="hw" aria-label="Makine durumu"></div>
+</header>
+<main>
+  <section aria-labelledby="h-run"><h2 id="h-run">1 · Şu an çalışan</h2><div id="running"><p class="mut">Yükleniyor…</p></div></section>
+
+  <section aria-labelledby="h-q">
+    <div class="row"><h2 id="h-q" class="grow">2 · Sıra (yukarıdan aşağıya koşar)</h2>
+      <label class="row"><input type="checkbox" id="auto"> Sırayı otomatik çalıştır</label>
+      <label class="row">Aynı anda <select id="maxrun"><option>1</option><option>2</option><option>3</option><option>4</option></select> iş</label></div>
+    <p class="mut">Otomatik kapalıyken işler yalnız siz “Şimdi başlat”a basınca koşar. Açıkken sıradaki iş bitince bir sonraki kendiliğinden başlar; kesilen devam edebilir işler kontrol noktasından AYNI hesapla sürer.</p>
+    <div id="queue"></div>
+  </section>
+
+  <section aria-labelledby="h-sug"><h2 id="h-sug">3 · Önerilen sıradaki 5 test</h2>
+    <p class="mut">Öneri gerçek duruma göre hesaplanır: bitmiş ya da kuyrukta olan işler çıkarılır, ön koşulu eksik olanlar sona atılır; gerekçe her satırda yazılıdır.</p>
+    <div id="suggest"></div></section>
+
+  <section aria-labelledby="h-live"><h2 id="h-live">4 · Canlı oyun izleme</h2>
+    <p class="mut">Gerçek bir canlı, seçtiğiniz oyunda koşar; çizilen her şey o anki gerçek dünya durumudur (konum, yön, kaynaklar, değer). Geliştirme tohumlarıyla (100–149) çalışır; <b>kanıt değildir</b>.</p>
+    <form class="f" id="liveform"></form>
+    <div class="row" style="margin-top:8px"><button class="p" id="lstart">Başlat</button><button id="lpause">Duraklat</button><button class="d" id="lstop">Durdur</button>
+      <label class="row">Hız <input type="range" id="lspeed" min="0.25" max="8" step="0.25" value="1"> <span id="lspeedv">1×</span></label><span id="lstatus" class="mut" role="status" aria-live="polite"></span></div>
+    <div class="legend" aria-label="Gösterge">
+      <span><svg width="22" height="22"><circle cx="11" cy="11" r="8" fill="none" stroke="var(--good)" stroke-width="3"/><text x="11" y="15" text-anchor="middle" font-size="12" fill="var(--good)">+</text></svg> ödüllü kaynak (temas +)</span>
+      <span><svg width="22" height="22"><circle cx="11" cy="11" r="8" fill="none" stroke="var(--bad)" stroke-width="3" stroke-dasharray="4 3"/><text x="11" y="15" text-anchor="middle" font-size="12" fill="var(--bad)">−</text></svg> cezalı kaynak (ısı tuzağı, temas −)</span>
+      <span><svg width="22" height="22"><circle cx="11" cy="11" r="8" fill="none" stroke="var(--neu)" stroke-width="2" stroke-dasharray="1 3"/><text x="11" y="15" text-anchor="middle" font-size="12" fill="var(--neu)">0</text></svg> ödülsüz kaynak (decoy)</span>
+      <span><svg width="22" height="22"><polygon points="4,17 11,4 18,17 11,13" fill="var(--ink)"/></svg> canlı (sivri uç = yön)</span>
+      <span>çizgi = son yol · alttaki iki çubuk = sol/sağ anten değeri (V)</span></div>
+    <div class="grid" id="arenas"><p class="mut">Henüz başlatılmadı.</p></div>
+    <h3 style="margin-top:12px">Bölüm sonuçları (ilk temas)</h3><div id="lhist" class="mut">Veri yok.</div>
+  </section>
+
+  <section aria-labelledby="h-cat"><h2 id="h-cat">5 · Tüm testler</h2><div id="catalog"></div></section>
+  <section aria-labelledby="h-hist"><h2 id="h-hist">6 · Biten işler ve dosyalar</h2><div id="history"></div>
+    <details><summary>Sonuç dosyaları (results/, docs/)</summary><div class="row" style="margin-top:8px"><input id="fpath" value="results" size="40" aria-label="Yol"><button id="fgo">Aç</button></div><div id="files" class="mut"></div></details></section>
+</main>
+<div id="toast" role="alert"></div>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let OV=null, TESTS=[], logOpen=new Set();
+function toast(m,err){const t=$("#toast");t.textContent=m;t.style.display="block";t.style.background=err?"var(--err)":"var(--ink)";clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display="none",4500)}
+async function api(path,body){const o=body===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)};
+  const r=await fetch(path,o);const ct=r.headers.get("content-type")||"";const d=ct.includes("json")?await r.json():await r.text();
+  if(!r.ok){throw new Error(d.error||r.status)}return d}
+async function act(path,body,ok){try{await api(path,body||{});if(ok)toast(ok);refresh()}catch(e){toast(e.message,true)}}
+const dur=s=>{s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h} sa ${m} dk`:m?`${m} dk ${s%60} sn`:`${s} sn`};
+const STAT={queued:"sırada",running:"çalışıyor",done:"bitti",failed:"BAŞARISIZ",interrupted:"kesildi",cancelled:"iptal"};
+
+function renderHW(h){const g=h.cuda?h.gpus.map(x=>`${esc(x.name)} (${x.mem_gb} GB)`).join(", "):"yok (yalnız CPU)";
+  const gl=h.gpu_live?` · GPU %${h.gpu_live.util} · ${Math.round(h.gpu_live.mem_used_mb)}/${Math.round(h.gpu_live.mem_total_mb)} MB · ${h.gpu_live.temp_c}°C`:"";
+  $("#hw").innerHTML=`<span>CPU <b>${h.cpu_count}</b> çekirdek${h.load?` · yük ${h.load.map(x=>x.toFixed(1)).join(" ")}`:""}</span><span>RAM <b>${h.ram_gb?h.ram_gb[0]+"/"+h.ram_gb[1]+" GB":"?"}</b></span><span>GPU <b>${g}</b>${gl}</span><span>Boş disk <b>${h.disk_free_gb} GB</b></span><span>Kod <b>${esc(h.git.commit)}</b> (${esc(h.git.branch)}${h.git.dirty?", kirli":""})</span><span>torch ${esc(h.torch)}</span><button id="upd" title="git pull --ff-only">Kodu güncelle</button>`;
+  $("#upd").onclick=()=>act("/api/update",{},"güncelleme istendi")}
+
+function jobHTML(j,showCtl){const p=j.progress;const pct=p?Math.round(100*p.done/p.total):null;
+  const bar=j.status==="running"?`<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" ${pct!==null?`aria-valuenow="${pct}"`:""}><i style="width:${pct??100}%;${pct===null?"opacity:.35":""}"></i></div><div class="mut">${p?`%${pct} — ${esc(p.text)}`:"bu iş için ilerleme ölçülemiyor; yalnız geçen süre gösterilir"} · geçen ${dur(j.elapsed||0)}</div>`:"";
+  const ctl=[];
+  if(showCtl){if(j.status==="queued"){ctl.push(`<button data-a="start" data-id="${j.id}" class="p">Şimdi başlat</button><button data-a="up" data-id="${j.id}" aria-label="Yukarı">↑</button><button data-a="down" data-id="${j.id}" aria-label="Aşağı">↓</button><button data-a="cancel" data-id="${j.id}" class="d">Çıkar</button>`)}
+    if(j.status==="running")ctl.push(`<button data-a="cancel" data-id="${j.id}" class="d">Durdur</button>`);
+    if(["failed","interrupted","cancelled"].includes(j.status))ctl.push(`<button data-a="retry" data-id="${j.id}">Yeniden sıraya al</button>`)}
+  ctl.push(`<button data-a="log" data-id="${j.id}">${logOpen.has(j.id)?"Günlüğü gizle":"Günlük"}</button>`);
+  return `<div class="job"><div class="h"><h3>${esc(j.title||j.test_id)}</h3><span class="tag s-${j.status}">${STAT[j.status]||j.status}</span>${j.validator?'<span class="tag">doğrulayıcı</span>':""}<span class="mut">${esc(j.id)} · deneme ${j.attempts} · kaynak ${esc(j.source)}</span></div>
+  <div class="mut">${esc(Object.entries(j.params).map(([k,v])=>k+"="+v).join(" · "))}${j.exit_code!==undefined?` · çıkış kodu ${j.exit_code}`:""}${j.note?` · ${esc(j.note)}`:""}${j.elapsed&&j.status!=="running"?` · süre ${dur(j.elapsed)}`:""}</div>${bar}
+  <div class="row" style="margin-top:6px">${ctl.join("")}</div><div id="log-${j.id}"></div></div>`}
+
+function bindJobButtons(root){root.querySelectorAll("button[data-a]").forEach(b=>b.onclick=()=>{const id=b.dataset.id,a=b.dataset.a;
+  if(a==="log"){if(logOpen.has(id))logOpen.delete(id);else logOpen.add(id);refresh();return}
+  act(`/api/jobs/${id}/${a}`,{},{start:"başlatıldı",cancel:"durdurma/çıkarma istendi",retry:"yeniden sıraya alındı"}[a])})}
+
+async function fillLogs(){for(const id of logOpen){const el=$("#log-"+id);if(el){try{const t=await api(`/api/jobs/${id}/log?bytes=8000`);el.innerHTML=`<pre>${esc(t)||"(günlük boş)"}</pre>`}catch(e){}}}}
+
+function paramForm(t,idp){return t.params.map(p=>{const id=`${idp}-${p.name}`;
+  if(p.kind==="choice"||p.kind==="pre"){const ch=p.choices||[];return `<label>${esc(p.label)}<select id="${id}" data-p="${p.name}">${ch.map(c=>`<option ${c===p.default?"selected":""}>${esc(c)}</option>`).join("")||"<option value=''>(yok)</option>"}</select></label>`}
+  return `<label>${esc(p.label)}<input id="${id}" data-p="${p.name}" type="number" value="${p.default??""}" ${p.lo!=null?`min="${p.lo}"`:""} ${p.hi!=null?`max="${p.hi}"`:""} step="${p.kind==="int"?1:"any"}"></label>`}).join("")}
+function readParams(root,t){const o={};root.querySelectorAll("[data-p]").forEach(e=>{o[e.dataset.p]=e.value});return o}
+
+function addCard(t,idp,compact){const dis=!t.runnable;
+  return `<details><summary>${compact?"Ayarla ve sıraya ekle":esc(t.title)+` <span class="tag">${esc(t.group)}</span>`+(t.validator?' <span class="tag">doğrulayıcı</span>':"")+(dis?` <span class="tag s-failed">engelli</span>`:"")}</summary>
+  <p class="mut">${esc(t.summary)}</p><p class="mut">Maliyet: ${esc(t.cost||"?")} · GPU: <b>${esc(t.gpu)}</b>${t.gpu_note?" — "+esc(t.gpu_note):""}${t.prereg?` · ön-kayıt: ${esc(t.prereg)}`:""}</p>
+  ${dis?`<p class="err">${esc(t.blocked_reason)}</p>`:`<form class="f" id="${idp}-form" onsubmit="return false">${paramForm(t,idp)}</form>
+  ${t.validator?`<label class="row"><input type="checkbox" id="${idp}-conf"> Ön-kayıtlı doğrulayıcı koşusu olduğunu biliyorum: ölçütler koşudan sonra değişmez, başarısızlık da raporlanır.</label>`:""}
+  <div class="row" style="margin-top:8px"><button class="p" data-add="${t.id}" data-idp="${idp}">Sıraya ekle</button></div>`}</details>`}
+function bindAdd(root){root.querySelectorAll("button[data-add]").forEach(b=>b.onclick=()=>{const t=TESTS.find(x=>x.id===b.dataset.add),idp=b.dataset.idp;
+  const conf=$(`#${idp}-conf`);act("/api/queue",{test_id:t.id,params:readParams($(`#${idp}-form`),t),confirm:conf?conf.checked:false,source:"panel"},"sıraya eklendi")})}
+
+function render(){const o=OV;renderHW(o.hardware);$("#conn").textContent="bağlı · "+new Date(o.time*1000).toLocaleTimeString("tr");
+  const run=o.jobs.filter(j=>j.status==="running"),q=o.jobs.filter(j=>j.status==="queued"),fin=o.jobs.filter(j=>!["running","queued"].includes(j.status)).reverse();
+  $("#running").innerHTML=run.length?run.map(j=>jobHTML(j,true)).join(""):`<p class="mut">Şu an çalışan iş yok.${q.length&&!o.auto?" Sırada iş var ama otomatik kapalı: “Şimdi başlat”a basın ya da otomatiği açın.":""}</p>`;
+  $("#queue").innerHTML=q.length?q.map(j=>jobHTML(j,true)).join(""):`<p class="mut">Sıra boş. Aşağıdaki öneriden ya da tüm testlerden ekleyin.</p>`;
+  $("#auto").checked=o.auto;$("#maxrun").value=o.max_running;
+  const sig=JSON.stringify(o.suggested.map(s=>[s.id,s.runnable,s.waiting_for]));
+  if(sig!==render.sig){render.sig=sig;$("#suggest").innerHTML=o.suggested.map((s,i)=>{const t=TESTS.find(x=>x.id===s.id);return `<div class="job"><div class="h"><h3>${i+1}. ${esc(s.title)}</h3><span class="tag">${esc(s.group)}</span>${s.runnable?"":`<span class="tag s-failed">engelli</span>`}</div><div class="mut">${esc(s.why)}${s.waiting_for.length?` · önce: ${esc(s.waiting_for.join(", "))}`:""}${s.runnable?"":` · ${esc(s.blocked_reason)}`}</div>${t&&s.runnable?addCard(t,"sg"+i,true):""}</div>`}).join("")||`<p class="mut">Öneri yok.</p>`;bindAdd($("#suggest"))}
+  $("#history").innerHTML=fin.length?fin.slice(0,15).map(j=>jobHTML(j,true)).join(""):`<p class="mut">Henüz biten iş yok.</p>`;
+  for(const c of [$("#running"),$("#queue"),$("#history")])bindJobButtons(c);fillLogs()}
+let busy=false;async function refresh(){if(busy)return;busy=true;try{if(!TESTS.length){TESTS=await api("/api/tests");$("#catalog").innerHTML=TESTS.map(t=>addCard(t,"ct-"+t.id)).join("");bindAdd($("#catalog"))}
+  OV=await api("/api/overview");render()}catch(e){$("#conn").textContent="bağlantı yok: "+e.message}finally{busy=false}}
+$("#auto").onchange=e=>act("/api/auto",{on:e.target.checked},e.target.checked?"otomatik sıra AÇIK":"otomatik sıra kapalı");
+$("#maxrun").onchange=e=>act("/api/max_running",{n:+e.target.value});
+$("#fgo").onclick=()=>files($("#fpath").value);
+async function files(p){try{const d=await api("/api/files?path="+encodeURIComponent(p));$("#fpath").value=d.path;
+  if(d.entries){$("#files").innerHTML="<table><tr><th>ad</th><th>boyut</th><th>değişim</th></tr>"+(d.path.includes("/")?`<tr><td><a href="#" data-p="${esc(d.path.replace(/\/[^/]*$/,""))}">..</a></td><td></td><td></td></tr>`:"")+d.entries.map(e=>`<tr><td><a href="#" data-p="${esc(d.path+"/"+e.name)}">${esc(e.name)}${e.dir?"/":""}</a></td><td>${e.size??""}</td><td>${new Date(e.mtime*1000).toLocaleString("tr")}</td></tr>`).join("")+"</table>";
+    $("#files").querySelectorAll("a[data-p]").forEach(a=>a.onclick=ev=>{ev.preventDefault();files(a.dataset.p)})}
+  else $("#files").innerHTML=d.binary?`<p>İkili dosya (${d.size} bayt).</p>`:`<pre>${esc(d.text)}</pre>${d.truncated?"<p class=mut>(son 300 KB)</p>":""}`}catch(e){toast(e.message,true)}}
+
+/* ---------------- canlı izleme ---------------- */
+let L={layout:null,fr:null,trails:[],es:null,opts:null};
+function buildLiveForm(o){const op=o.options;L.opts=op;const cfg=o.cfg||{};
+  const sel=(id,lab,arr,cur)=>`<label>${lab}<select id="${id}">${arr.map(x=>`<option ${x===cur?"selected":""}>${esc(x)}</option>`).join("")}</select></label>`;
+  const f=$("#liveform");if(f.dataset.built)return;f.dataset.built=1;
+  f.innerHTML=sel("l-pre","Popülasyon dosyası",op.pre_files.length?op.pre_files:["(yok — önce ‘Hızlı demo popülasyonu’ işini çalıştırın)"],cfg.pre)+sel("l-game","Oyun",op.games,cfg.game||"O6a")+sel("l-arm","Kol",op.arms,cfg.arm||"plastic")
+   +`<label>Oyun tohumu (100–149)<input id="l-seed" type="number" min="100" max="149" value="${cfg.seed||140}"></label><label>Canlı sayısı (1–6)<input id="l-agents" type="number" min="1" max="6" value="${cfg.agents||2}"></label>`
+   +sel("l-trials","Canlı başına deneme",["2","4"],String(cfg.trials||2))+`<label>Bölüm süresi (sn)<input id="l-sec" type="number" min="5" max="90" value="${cfg.seconds||30}"></label><label>Bölüm sayısı (0 = durdurana dek)<input id="l-eps" type="number" min="0" max="500" value="${cfg.episodes||0}"></label>`
+   +sel("l-dev","Cihaz",op.cuda?["cpu","cuda"]:["cpu"],cfg.device||"cpu")}
+$("#lstart").onclick=()=>act("/api/live/start",{pre:$("#l-pre").value,game:$("#l-game").value,arm:$("#l-arm").value,seed:+$("#l-seed").value,agents:+$("#l-agents").value,trials:+$("#l-trials").value,seconds:+$("#l-sec").value,episodes:+$("#l-eps").value,device:$("#l-dev").value},"canlı izleme başlıyor");
+$("#lstop").onclick=()=>act("/api/live/stop");let paused=false;$("#lpause").onclick=()=>{paused=!paused;act("/api/live/pause",{on:paused});$("#lpause").textContent=paused?"Sürdür":"Duraklat"};
+$("#lspeed").oninput=e=>{$("#lspeedv").textContent=e.target.value+"×";api("/api/live/speed",{x:+e.target.value}).catch(()=>{})};
+function connectLive(){if(L.es)return;const es=new EventSource("/api/live/stream");L.es=es;es.onmessage=m=>{const d=JSON.parse(m.data);
+  if(d.type==="layout"){L.layout=d;L.trails=Array.from({length:d.B},()=>[]);buildArenas(d)}
+  else if(d.type==="frame"){L.fr=d;d.x.forEach((x,i)=>{const t=L.trails[i];if(t){t.push([x,d.y[i]]);if(t.length>500)t.shift()}});drawAll()}
+  else if(d.type==="episode_end"){loadLiveState()}else if(d.type==="error"){$("#lstatus").textContent="HATA: "+d.error;toast(d.error,true)}};
+  es.onerror=()=>{es.close();L.es=null;setTimeout(connectLive,3000)}}
+function buildArenas(d){const box=$("#arenas");if(box.dataset.ep!==String(d.B)+d.game){box.dataset.ep=String(d.B)+d.game;box.innerHTML="";for(let i=0;i<d.B;i++){const c=document.createElement("div");c.className="cell";
+  c.innerHTML=`<canvas width="360" height="360" id="cv${i}" role="img" aria-label="Canlı ${i+1} arenası"></canvas><div class="mut" id="cap${i}"></div>`;box.appendChild(c)}}}
+function colorOf(r){return r>0?"--good":r<0?"--bad":"--neu"}
+function drawAll(){const d=L.layout,f=L.fr;if(!d||!f)return;const css=getComputedStyle(document.documentElement);const col=n=>css.getPropertyValue(n).trim();
+  for(let i=0;i<d.B;i++){const cv=$("#cv"+i);if(!cv)continue;const g=cv.getContext("2d"),S=cv.width,k=S/d.arena,X=v=>v*k,Y=v=>S-v*k;
+    g.clearRect(0,0,S,S);g.strokeStyle=col("--line");g.lineWidth=2;g.strokeRect(1,1,S-2,S-2);
+    for(let s=0;s<2;s++){if(!d.active[i][s])continue;const [sx,sy]=d.src[i][s],r=d.slot_reward[s]!==undefined?d.reward[i][s]:0,c=col(colorOf(r));
+      g.lineWidth=3;g.strokeStyle=c;g.setLineDash(r<0?[7,5]:r===0?[2,5]:[]);g.beginPath();g.arc(X(sx),Y(sy),Math.max(10,d.contact_radius*k),0,6.283);g.stroke();g.setLineDash([]);
+      g.fillStyle=c;g.font="bold 16px system-ui";g.textAlign="center";g.fillText(r>0?"+":r<0?"−":"0",X(sx),Y(sy)+5);
+      const lab=[d.odor[i][s]>=0?"koku "+d.odor[i][s]:"kokusuz",d.vis[i][s]>=0?"desen "+d.vis[i][s]:""].filter(Boolean).join(" · ");g.font="12px system-ui";g.fillText(lab,X(sx),Y(sy)-Math.max(14,d.contact_radius*k)-4)}
+    const tr=L.trails[i];g.strokeStyle=col("--mut");g.lineWidth=1.5;g.beginPath();tr.forEach((p,j)=>j?g.lineTo(X(p[0]),Y(p[1])):g.moveTo(X(p[0]),Y(p[1])));g.stroke();
+    const x=X(f.x[i]),y=Y(f.y[i]),h=-f.h[i];g.save();g.translate(x,y);g.rotate(h);g.fillStyle=col("--ink");g.globalAlpha=f.done[i]?.45:1;g.beginPath();g.moveTo(14,0);g.lineTo(-9,-8);g.lineTo(-4,0);g.lineTo(-9,8);g.closePath();g.fill();g.restore();g.globalAlpha=1;
+    const m=Math.max(Math.abs(f.vl[i]),Math.abs(f.vr[i]),0.2),bw=60;[["S",f.vl[i],8],["R",f.vr[i],22]].forEach(([n,v,yy])=>{g.fillStyle=col("--line");g.fillRect(S-bw-30,yy,bw,10);g.fillStyle=v>=0?col("--good"):col("--bad");const w=Math.min(1,Math.abs(v)/m)*bw/2;g.fillRect(S-bw-30+bw/2-(v<0?w:0),yy,w,10);g.fillStyle=col("--ink");g.font="11px system-ui";g.textAlign="right";g.fillText(n==="S"?"sol":"sağ",S-bw-34,yy+9)});
+    const sl=f.slot[i];$("#cap"+i).textContent=`canlı ${i+1} · ${f.done[i]?"bölüm bitti":f.feed[i]?"yiyor":"geziyor"} · ilk temas: ${sl<0?"yok":sl===0?"yuva 0 (hedef)":"yuva 1"}${d.swap&&d.swap.length?` · rol ${d.swap[i]?"ters":"düz"}`:""}`}
+  $("#lstatus").textContent=`bölüm ${f.ep} · ${f.t} sn`}
+async function loadLiveState(){try{const s=await api("/api/live/state");buildLiveForm(s);const st=s.status;$("#lstatus").textContent=($("#lstatus").textContent.startsWith("bölüm")&&s.running?$("#lstatus").textContent:`durum: ${st.state}${st.error?" — "+st.error:""}`);
+  const h=s.history;if(!h.length){$("#lhist").textContent="Veri yok."}else{const n=h.length,last=h.slice(-10);const cum=h.reduce((a,r)=>[a[0]+r.first_good,a[1]+r.first_other,a[2]+r.none],[0,0,0]).map(x=>x/n);
+    $("#lhist").innerHTML=`<p>Toplam ${n} bölüm: ilk temas hedef <b>${(100*cum[0]).toFixed(0)}%</b> · diğer kaynak <b>${(100*cum[1]).toFixed(0)}%</b> · temas yok <b>${(100*cum[2]).toFixed(0)}%</b>${h[n-1].w_shift!=null?` · öğrenilen ağırlık değişimi (ort. |W−W0|) <b>${h[n-1].w_shift.toExponential(2)}</b>`:""}. Net tercih (hedef − diğer) son bölümler:</p>
+    <table><tr><th>bölüm</th><th>hedef</th><th>diğer</th><th>yok</th><th>net</th></tr>${last.map(r=>`<tr><td>${r.ep}</td><td>${(100*r.first_good).toFixed(0)}%</td><td>${(100*r.first_other).toFixed(0)}%</td><td>${(100*r.none).toFixed(0)}%</td><td><b>${(r.first_good-r.first_other>=0?"+":"")+(r.first_good-r.first_other).toFixed(2)}</b></td></tr>`).join("")}</table><p class="mut">Az sayıda canlıyla bu tablo gürültülüdür; kanıt değil, gözlem.</p>`}}catch(e){}}
+refresh();loadLiveState();connectLive();setInterval(refresh,2500);setInterval(loadLiveState,5000);
+</script>
+</body>
+</html>

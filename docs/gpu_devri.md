@@ -47,3 +47,6 @@ Durum etiketi: **[denendi: Linux/CPU]** bu ortamda çalıştırıldı; **[denenm
 
 ## 5. İş bittiğinde
 `docs/arkadasa_ozet.md` içine bir arkadaşa verilecek **tek, basit paragraf** yazılır (kullanıcı isteği). Şu anki içerik taslaktır; tüm oyun doğrulayıcıları ve E1 karıştırma kontrolü bittiğinde güncellenir.
+
+## 8. Arkadaşın GPU'lu bilgisayarı için uzak kontrol (K-059, 2026-10-31)
+Laptop yerine arkadaşın bilgisayarında koşmak için `scripts/ops_baslat.sh` ile açılan kontrol sunucusu yazıldı (`docs/uzak_kontrol.md`): sıradaki 5 test, otomatik sıra, canlı oyun izleme, devam eden işler. **Dikkat:** ön-kayıtlı doğrulayıcılar (O5c…) bilerek CPU'da kalır (GPU'da rastgele sayı akışları farklı → ön-kayıtlı eşleme bozulur); GPU'ya geçiş ayrı ön-kayıt ister. O5c'yi başlatmak için panelde "O5c — ön-kayıtlı doğrulayıcı"yı sıraya ekleyip onaylamak yeter (kontrol noktalı, yeniden başlatmaya dayanıklı).
