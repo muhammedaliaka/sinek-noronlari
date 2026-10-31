@@ -33,6 +33,29 @@ Yanlışlanma: (a) temas-yok > 0,80 ise yönlendirme hipotezi yanlış; (b) NP <
 SONUÇ-4 (K-055, tohum 140, 24 yaşam×2, 8 bölüm, ÖĞRENMESİZ, `vis_innate_flat` açık): temas-yok görsel 0,833 vs kör 0,620 → TAHMİN-4(a) YANLIŞ (≤0,75 beklenmişti); KC'ye özgü doğuştan ağırlık yönlendirmesi nedeni DEĞİL.
 `vis_innate_flat` bu yüzden varsayılan kapalı ve fabrika tarafından AÇILMAZ (seçenek olarak kodda kalır). O6b'de görsel açıkken temas oranını neyin yarıya indirdiği AÇIK SORU (K-055).
 
+K-058 tanıları (öğrenmesiz, tohum 140): temas-yok kör 0,67 | görsel X/Y 0,84 | her iki kaynak X 0,68 | her iki kaynak Y 0,74 | görsel ölçeği 0,5: 0,72 (doz-yanıt monoton) → düşüş, iki farklı desenin birlikte bulunmasına bağlı (X–Y doğuştan değer farkı |ΔX−ΔY| ≈0,05–0,09 → yanal kontrast çatışması).
+`vis_kc_balance` (her görsel KC için doğuştan yaklaş/kaçın katkısını eşitleme) X–Y farkını 0,05→0,17'ye ÇIKARDI → çözüm değil, varsayılan kapalı (seçenek olarak kodda).
+TAHMİN-5 (olay kıtlığı hipotezi; koşudan önce): `--seconds 90` (3× uzun bölüm), 12 canlı×2, 16 bölüm: olay kıtlığı asıl neden ise naive_plastic NP son 2 blokta ∈ [+0,10, +0,40] ve son blokta temas-yok < 0,6;
+öğrenme dinamiği asıl neden ise NP ≈0 ve temas-yok ≥0,9'a çöküş sürer. Kör kol NP ≈0.
+
+SONUÇ-5 (TAHMİN-5 YANLIŞ; seconds=90, tohum 141, 12×2, 16 bölüm): naive_plastic NP −0,10/−0,01/−0,01/−0,02, temas-yok 0,73→0,98; kör kol temas-yok 0,25–0,34 (NP ≈0) → olay kıtlığı neden DEĞİL: görsel açıkken yaratık 90 sn'de bile kaynaklara gitmiyor.
+Kör kolun temasları rastgele gezinmeden (naive beyin koku A'ya doğuştan hafif kaçıngan/nötr: V(koku) 0,067 < V(yok) 0,091); görsel girdinin desenle işaretli yanal kontrastı (±0,02–0,03, koku kontrastıyla aynı büyüklükte) bu gezinmeyi bozuyor.
+K-058 müdahalesi: desenden bağımsız, öğrenilmemiş görsel yaklaşma refleksi `motor.vis_taxis_gain` (göz şiddeti kontrastı yönünde dönüş; sinek nesne çekiciliği; elle yazılmış R-11). Öğrenmesiz naive, tohum 140, 24×2, 4 bölüm: temas-yok 0,844 (refleks 0) → 0,167 (kazanç 2) → 0,0 (5, 10); güvenli/tuzak ≈ eşit (0,41/0,42 @2).
+TAHMİN-6 (koşudan önce; tek kazanç = 2, tarama yok): naive_plastic (refleks 2) NP son 2 blokta ort. ≥ +0,20 ve temas-yok < 0,3 (olay bolluğu); kör kol |NP| < 0,10. Yanlışlanma: NP < +0,10 → öğrenme dinamiği/okuma de sorunlu (ayrı teşhis).
+
+SONUÇ-6 (TAHMİN-6 YANLIŞ; refleks 2, tohum 142, 24×2): naive_plastic NP −0,01/+0,01/−0,01/−0,01/+0,01/0,00, temas-yok 0,62→0,97 (blok 1 temas %38: yalnız birkaç olaydan sonra yaratık görselden uzaklaşıyor); kör kol NP ≈0.
+Zorunlu-temas ölçümü (tek desen, 8 deneme; K-058): koku +0,30/−0,25 (T=0,6), görsel +0,37/−0,66 (T=0,6) ve +2,54/−3,19 (T=2,5) → görsel yol koku yolundan 1–7× daha sert öğreniyor ve cezaya doğru asimetrik; ortak KC'ler (cos 0,4) yüzünden ceza X'e de yayılıp ortak negatif değer üretiyor,
+yanal kontrast (v_l−v_r) bunu görselden KAÇMA olarak okuyor (tek kaynak tek gözde) ve refleks 2'yi yeniyor.
+TAHMİN-7 (koşudan önce; tek değer, tarama yok): refleks kazancı 10 (temas bolluğu korunur; öğrenilmiş yanal kontrast ~0,2×60=12 rad/s mertebesinde): naive_plastic NP son 2 blokta ort. ≥ +0,10 ve temas-yok < 0,5. Yanlışlanma: NP < +0,05 → refleks çözüm değil; sorun öğrenmenin sertliği/yayılması (görsel kazanç `vis_kc_gain`, ayrı teşhis).
+
+SONUÇ-7 (TAHMİN-7 YANLIŞ; refleks 10, tohum 143, 24×2): NP −0,04/+0,02/+0,05/−0,01/+0,01/+0,01, temas-yok 0,30→0,89 (temas başta bol, 4-8 bölümde çöküyor) → öğrenilen kaçınma refleks 10'u da yeniyor. Yakın-uzak aktarım ölçümü (12 deneme X+/Y−): Δ 0,86 (0,9) → 0,52 (0,3) → 0,34 (0,15): aktarım kısmi, sıfır değil;
+V(X) neredeyse hiç yükselmiyor (+0,17), V(Y) −0,69: öğrenme ağırlıklı olarak CEZA öğrenmesi; ortak KC'ler yoluyla ceza X'e de yayılıp ortak negatif değer → "görselden kaç". (Not: 8 canlılık tanılarda rol dengelemesi yoktu; pilotlar 24 canlıyla dengeli.)
+TAHMİN-8 (koşudan önce; T ve refleks birleşik, tek koşu): `--reward-target 2.5 --vis-taxis 10`: T=2,5 zorunlu temasta ödül/ceza oranını 0,56→0,80'e getiriyor (+2,54/−3,19) → ödüllü X güçlü pozitif, ceza yayılımı dengelenir: naive_plastic NP son 2 blokta ≥ +0,10, temas-yok < 0,6. Yanlışlanma: NP < +0,05 → T de çözüm değil.
+
+SONUÇ-8 (TAHMİN-8 YANLIŞ; T=2,5 + refleks 10, tohum 144, 24×2): NP −0,24/−0,04/−0,01/+0,02/−0,01/0,00, temas-yok 0,45→1,00; İLK BLOKTA YANLIŞ İŞARET (tuzak 0,40 > güvenli 0,15) → T=2,5 çözüm değil, durumu kötüleştirdi.
+Dürüst durum (K-058): O6b hâlâ ÇÖZÜLMEDİ. Çürütülen hipotezler: iç değer nötrlüğü (κ, K-051), kod darlığı/örtüşme (K-053), KC'ye özgü doğuştan ağırlıklar (K-055), olay kıtlığı (SONUÇ-5), doğuştan görsel yönlendirme bozukluğu tek başına (refleks, SONUÇ-6/7), ödül/ceza asimetrisi tek başına (T, SONUÇ-8).
+Açık ipuçları: (i) zorunlu temasta görsel yol koku yolundan 1–7× sert ve cezaya asimetrik; (ii) kapalı çevrimde öğrenme ortak negatif görsel değer üretiyor ve yaratık görselden uzaklaşıyor; (iii) T=2,5 ilk blokta yanlış işaret veriyor (işaret/zamanlama hatası şüphesi: temas anı uygunluk izi vs yaklaşma anı kodu, `play_sequence` öğrenme zamanlaması) — henüz kod düzeyinde denetlenmedi.
+
 TAHMİN-2 (nötrleştirilmiş görsel, aynı tohum 140; koşudan önce): görsel yaratık artık temas edebilir; naive_plastic NP son blokta ∈ [+0,05, +0,30] (belirsizlik geniş: kalan innate fark X≠Y ve VPN→KC zayıflığı);
 kör kol |NP| < 0,10. Görsel NP < +0,05 ise "görsel öğrenme bu hâliyle yetersiz" — ayar sürüsü yapılmaz (E-08).
 """
@@ -51,10 +74,10 @@ from ..games.protocol import ARMS, make_game_creature, play
 VIS_GAMES = ("O6b", "O6c")
 
 
-def run_arm(pre, game: str, arm: str, seed: int, agents: int, copies: int, episodes: int, seconds: float, n_vis: int = 6) -> np.ndarray:
+def run_arm(pre, game: str, arm: str, seed: int, agents: int, copies: int, episodes: int, seconds: float, n_vis: int = 6, vis_taxis: float = 0.0, reward_target: float | None = None) -> np.ndarray:
     """(bölüm, eleman) ilk temas yuvası (−1 yok)."""
     ids = list(range(min(agents, pre.world.B)))
-    c = make_game_creature(pre, game, arm, ids, copies, seed, vis_feat=n_vis if game in VIS_GAMES else 0)
+    c = make_game_creature(pre, game, arm, ids, copies, seed, vis_feat=n_vis if game in VIS_GAMES else 0, vis_taxis=vis_taxis if game in VIS_GAMES else 0.0, reward_target=reward_target)
     learn = ARMS[arm].eta > 0
     return np.stack([play(c, seconds, learn=learn, test=False)["slot"] for _ in range(episodes)])
 
@@ -81,6 +104,8 @@ def main(argv=None) -> str:
     ap.add_argument("--block", type=int, default=4)
     ap.add_argument("--seconds", type=float, default=30.0)
     ap.add_argument("--n-vis", type=int, default=6)
+    ap.add_argument("--reward-target", type=float, default=None, help="GELİŞTİRME (K-048/K-058): DAN hedefi T (varsayılan yapılandırma 0,6)")
+    ap.add_argument("--vis-taxis", type=float, default=0.0, help="GELİŞTİRME (K-058): görsel yaklaşma refleksi kazancı (rad/s); 0 = kapalı")
     ap.add_argument("--threads", type=int, default=1)
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
@@ -95,7 +120,7 @@ def main(argv=None) -> str:
          "Hücre: güvenli / tuzak / temas-yok oranı → NP (= güvenli − tuzak). Bloklar bölüm sırasıyla.", "",
          "| kol | " + " | ".join(f"b{i + 1} ({i * a.block + 1}-{min((i + 1) * a.block, a.episodes)})" for i in range(nb)) + " |", "|---|" + "---|" * nb]
     for arm in a.arms.split(","):
-        slot = run_arm(pre, a.game, arm, a.seed, a.agents, a.copies, a.episodes, a.seconds, a.n_vis)
+        slot = run_arm(pre, a.game, arm, a.seed, a.agents, a.copies, a.episodes, a.seconds, a.n_vis, a.vis_taxis, a.reward_target)
         bl = block_table(slot, a.block)
         L.append(f"| {arm} | " + " | ".join(f"{s:.2f} / {t:.2f} / {n:.2f} → **{np_:+.2f}**" for s, t, n, np_ in bl) + " |")
         print(f"[{time.time() - t0:5.0f}s] {L[-1]}", flush=True)

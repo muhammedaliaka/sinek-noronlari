@@ -56,7 +56,12 @@ class Creature:
         vis = w.sense_vis() if hasattr(w, "sense_vis") else None       # yalnız görsel oyun dünyaları (O6); diğerlerinde eski yol
         valence = self.brain.step(glom, taste, touch, learn=learn) if vis is None else self.brain.step(glom, taste, touch, learn=learn, vis=vis)
         self.last_valence = valence
-        w.step(self.motor(valence), self.cfg.motor.speed)
+        turn = self.motor(valence)
+        m = self.cfg.motor
+        if vis is not None and m.vis_taxis_gain != 0.0:             # K-058: desenden bağımsız görsel nesneye yaklaşma refleksi (elle yazılmış, R-11); pozitif = sola (sol göz = indeks 0)
+            e = vis.sum(-1)                                          # (B,2) göz başına toplam şiddet
+            turn = turn + m.vis_taxis_gain * (e[:, 0] - e[:, 1]) / (e[:, 0] + e[:, 1] + m.vis_taxis_eps)
+        w.step(turn, self.cfg.motor.speed)
 
     def run(self, seconds: float, learn: bool = True, stop_when_done: bool = False) -> int:
         n = int(round(seconds / self.cfg.world.dt))

@@ -39,7 +39,7 @@ def _mean_v(cbrain_cfg, level: float, n: int, steps: int, seed: int, with_vis: b
 
 def neutral_scale(cbrain_cfg, level: float = 0.6, tol: float = 0.01, n: int = 64, steps: int = 40, seed: int = 12345, iters: int = 14) -> float:
     """κ: 'kaçın' sınıfı görsel-KC->MBON çarpanı; ikili arama, sonuç (yapılandırma → κ) önbelleğe alınır."""
-    key = (cbrain_cfg.data_dir, cbrain_cfg.n_vis_feat, cbrain_cfg.vis_gain, cbrain_cfg.vis_tuning_seed, cbrain_cfg.vis_tuning_density, cbrain_cfg.vis_kc_gain, cbrain_cfg.vis_innate_flat, level, cbrain_cfg.class_balance)
+    key = (cbrain_cfg.data_dir, cbrain_cfg.n_vis_feat, cbrain_cfg.vis_gain, cbrain_cfg.vis_tuning_seed, cbrain_cfg.vis_tuning_density, cbrain_cfg.vis_kc_gain, cbrain_cfg.vis_innate_flat, cbrain_cfg.vis_kc_balance, level, cbrain_cfg.class_balance)
     if key in _CACHE:
         return _CACHE[key]
     base = dataclasses.replace(cbrain_cfg, vis_avoid_scale=1.0)

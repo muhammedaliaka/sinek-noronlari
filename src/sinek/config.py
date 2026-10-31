@@ -95,6 +95,7 @@ class ConnectomeBrainConfig:
     vis_tuning_seed: int = 0         # ayar matrisinin tohumu (popülasyon sabiti; canlı tohumundan bağımsız)
     vis_tuning_density: float = 0.10  # (K-053; ilk tasarım 0,4) VPN başına özellik kanalına bağlanma olasılığı
     vis_kc_gain: float = 8.0         # VPN->KC ağırlık çarpanı (K-053; 47 VPN, yüzlerce PN'e karşı; görsel KC kodu koku koduna kıyasla ≈6× dardı); 1 = PN ile aynı ölçek
+    vis_kc_balance: bool = False     # True: her görsel KC'nin doğuştan KC->MBON katkısı 'yaklaş' ve 'kaçın' sınıfında eşitlenir (K-058)
     vis_innate_flat: bool = False    # True: görsel KC'lerin doğuştan KC->MBON ağırlıkları görsel KC ortalamasına eşitlenir (K-055); False = bağlantı verisi olduğu gibi
     vis_avoid_scale: float = 1.0     # görsel KC (VPN girdili) -> 'kaçın' sınıfı MBON sinapslarının çarpanı; eğitimsiz ağın görsel girdiye nötr olması için `games.vis_calibration.neutral_scale` ile kalibre edilir (E-17, K-051); 1 = kalibrasyonsuz
 
@@ -136,6 +137,8 @@ class MotorConfig:
     turn_gain: float = 10.0          # rad/saniye (öğrenilmiş kontrast x kazanç)
     wander_sigma: float = 1.0        # rad/sqrt(saniye) rastgele gezinme
     contrast_eps: float = 0.05       # kontrast paydasındaki koruma (V birimi)
+    vis_taxis_gain: float = 0.0      # rad/s: görsel yaklaşma refleksi (K-058): toplam göz şiddeti kontrastı yönünde dönüş; desenden bağımsız, öğrenilmemiş; 0 = kapalı (eski yol bit-bit aynı)
+    vis_taxis_eps: float = 0.1       # görsel kontrast paydasındaki koruma
 
 
 @dataclass

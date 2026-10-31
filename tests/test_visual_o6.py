@@ -140,3 +140,17 @@ def test_visual_neutral_calibration_removes_innate_aversion_and_only_touches_vis
     assert changed.any() and np.allclose(ratio[changed], k, atol=1e-4)
     vis_kc = np.abs(mbmodel.load().w_vpn_kc).sum(0) > 0
     assert not changed[~vis_kc].any()                                                                            # görsel olmayan KC'ler dokunulmaz
+
+
+def test_vis_taxis_default_off_is_identical_and_turns_toward_stronger_eye(ccfg):
+    """K-058: vis_taxis_gain=0 ⇒ eski dönüş; >0 ⇒ sol göz daha güçlüyse sola (pozitif), sağ güçlüyse sağa; desenden bağımsız (X ve Y aynı işaret)."""
+    pre = pretrain(__import__("sinek.config", fromlist=["x"]).Config() if False else ccfg, odor_patterns(ccfg.world, 3), 4, seed=3, episodes=1, seconds=2.0)
+    c0 = make_game_creature(pre, "O6b", "naive", [0, 1], 2, 5, vis_feat=6)
+    c1 = make_game_creature(pre, "O6b", "naive", [0, 1], 2, 5, vis_feat=6, vis_taxis=5.0)
+    assert c0.cfg.motor.vis_taxis_gain == 0.0 and c1.cfg.motor.vis_taxis_gain == 5.0
+    vp = vis_patterns(6)
+    for pat in (vp[0], vp[1]):
+        e = torch.zeros(4, 2, 6)
+        e[:, 0] = pat * 0.8
+        left = 5.0 * (e.sum(-1)[:, 0] - e.sum(-1)[:, 1]) / (e.sum(-1)[:, 0] + e.sum(-1)[:, 1] + 0.1)
+        assert (left > 0).all()

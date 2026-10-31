@@ -65,7 +65,7 @@ O3_ARMS = {"A": (True, True), "B": (True, False), "C": (False, True), "D": (Fals
 
 def make_game_creature(pre: Creature, game: str | GameSpec, arm: str, agents: Sequence[int], trials: int, seed: int,
                        spec: GameSpec | None = None, o3: str | None = None, reward_target: float | None = None,
-                       vis_feat: int = 0) -> Creature:
+                       vis_feat: int = 0, vis_taxis: float = 0.0) -> Creature:
     """Ön-eğitimli canlılardan (her biri `trials` kez kopyalanır) oyun koşusu kurar. Eleman = canlı·trials + deneme.
 
     `vis_feat` > 0 (O6): görsel ön uç açık (yalnız `naive` beyinler; cbrain.n_vis_feat = vis_feat, dünyada görsel kanal açık).
@@ -83,6 +83,8 @@ def make_game_creature(pre: Creature, game: str | GameSpec, arm: str, agents: Se
         cfg = dataclasses.replace(cfg, cbrain=dataclasses.replace(cfg.cbrain, n_vis_feat=vis_feat))
         from .vis_calibration import neutral_scale          # E-17: eğitimsiz ağ görsel girdiye nötr (ön-tanımlı ölçüt)
         cfg = dataclasses.replace(cfg, cbrain=dataclasses.replace(cfg.cbrain, vis_avoid_scale=neutral_scale(cfg.cbrain)))
+    if vis_taxis:
+        cfg = dataclasses.replace(cfg, motor=dataclasses.replace(cfg.motor, vis_taxis_gain=float(vis_taxis)))   # K-058 (yalnız geliştirme; görsel oyun kolları)
     if trials % 2:
         raise ValueError("trials çift olmalı (ayna çiftleri)")
     world = GameWorld(cfg.world, sp, B, seed, dev, patterns=pre.world.patterns, swap=pre.world.swap[idx.to(pre.world.swap.device)], n_vis=vis_feat)

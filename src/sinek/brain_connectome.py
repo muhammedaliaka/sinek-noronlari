@@ -97,6 +97,15 @@ class ConnectomeBrain:
             m = self.W0[vf].mean(0, keepdim=True)
             self.W0 = self.W0.clone(); self.W0[vf] = m
             self.W = self.W.clone(); self.W[:, vf] = m
+        if self.n_vis > 0 and cfg.vis_kc_balance:                  # K-058: her görsel KC'nin doğuştan 'yaklaş' ve 'kaçın' sınıfı katkısı eşitlenir (V = class_balance·yaklaş − kaçın = 0) → desen/etkinlik miktarından bağımsız nötr (elle yazılmış, R-11)
+            vb = t(np.abs(d.w_vpn_kc)).sum(0) > 0
+            app_sum = (self.W0 * self.cls_w[:, 0].unsqueeze(0)).sum(1)          # (n_kc,)
+            avo_sum = (self.W0 * self.cls_w[:, 1].unsqueeze(0)).sum(1)
+            ratio = torch.where(vb & (avo_sum > 0) & (app_sum > 0), cfg.class_balance * app_sum / avo_sum.clamp(min=1e-12), torch.ones_like(app_sum))
+            Sb = torch.ones(self.n_kc, self.n_mbon, device=self.device)
+            Sb = torch.where((self.cls_w[:, 1] > 0).unsqueeze(0), ratio.unsqueeze(1).expand(-1, self.n_mbon), Sb)
+            self.W0 = self.W0 * Sb
+            self.W = self.W * Sb.unsqueeze(0)
         if self.n_vis > 0 and cfg.vis_avoid_scale != 1.0:          # eğitimsiz ağın görsel girdiye nötr olması (kalibrasyon; elle yazılmış, R-11)
             vis_kc = t(np.abs(d.w_vpn_kc)).sum(0) > 0                # (n_kc,) VPN girdili KC'ler
             S = torch.ones(self.n_kc, self.n_mbon, device=self.device)
