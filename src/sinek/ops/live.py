@@ -57,6 +57,7 @@ class LiveSession:
         self.history: list[dict] = []
         self.cfg: dict = {}
         self.speed = 1.0
+        self.start_lock = threading.Lock()
         self.rec: dict | None = None
         self.rec_path: Path | None = None
         self._nframe = 0
@@ -64,6 +65,10 @@ class LiveSession:
     # --------------------------------------------------------------------- kontrol
     def start(self, pre: str, game: str, arm: str, seed: int, agents: int = 2, trials: int = 2, seconds: float = 30.0,
               device: str = "cpu", fps: float = 20.0, threads: int = 2, episodes: int = 0) -> None:
+        with self.start_lock:                 # iki eşzamanlı başlatma isteği iki iş parçacığı açmasın
+            self._start(pre, game, arm, seed, agents, trials, seconds, device, fps, threads, episodes)
+
+    def _start(self, pre, game, arm, seed, agents, trials, seconds, device, fps, threads, episodes) -> None:
         if self.thread and self.thread.is_alive():
             raise R.ParamError("canlı izleme zaten çalışıyor; önce durdurun")
         if game not in LIVE_GAMES:

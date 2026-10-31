@@ -1,6 +1,6 @@
 # Uzak kontrol: arkadaşın (GPU'lu) bilgisayarında sunucu + canlı panel + akıllı kuyruk
 
-Karar: K-059. Kod: `src/sinek/ops/`. Sınama: `tests/test_ops.py` (16 test). **Bu bir altyapıdır; bilimsel kanıt üretmez.**
+Karar: K-059. Kod: `src/sinek/ops/`. Sınama: `tests/test_ops.py` (62 test: `test_ops.py`, `test_ops_denetim.py`, `test_ops_arayuz.py`). **Bu bir altyapıdır; bilimsel kanıt üretmez.**
 
 ## 1. Ne yapar (yalnız gerçek veri; sahte yüzde/çizim yok)
 * **Makine durumu:** CPU çekirdeği/yük, RAM, boş disk, GPU adı/belleği/kullanımı (`nvidia-smi` varsa), kod sürümü (commit), PyTorch sürümü.
@@ -49,3 +49,8 @@ Komutlar yalnız `src/sinek/ops/registry.py`'deki işleri başlatabilir (keyfi k
 * “Gerileme denetimi (T=2,5)” ve “O6b öğrenme zamanı/işareti denetimi” kayıt defterinde **planlı/engelli** görünür: betikleri henüz yok; yazıldıkça kayda eklenir.
 * Windows’ta `run_o5c_validators.sh` için bash gerekir (WSL2/Git Bash); yerel Windows’ta denenmedi.
 * Arayüz tarayıcıda (Chromium, masaüstü ve telefon genişliği) bu ortamda görsel olarak denetlendi; başka tarayıcılar denenmedi.
+
+## 7. Denetim sonuçları (K-061) — arkadaşın makinesi gelmeden önce yapılanlar
+Yöntem: kodu satır satır okuma, bozuk/saldırgan girdi, süreç öldürme, yük, gerçek tarayıcı. 8 bulgu düzeltildi (E-21…E-27 `docs/karar_defteri.md`): git yayınında komutun iki kez uygulanması, eski imzalı komutun yeniden oynatılması, istemcinin komutu sessizce düşürmesi, Windows'ta süreç öldürme tuzağı, telefon genişliğinde taşma, performans/sağlamlık.
+**Doğrulananlar (Linux/CPU):** sunucu `kill -9` ile ölse de iş yaşar, yeni sunucu yeniden bağlanır, iş `done` olur; iptal süreç ağacını (torunları) öldürür; sinyalle ölen devam edebilir iş AYNI hesapla kuyruğa döner (≤3 deneme); bozuk `state.json` yedeklenip temiz başlanır; 20 eşzamanlı canlı-akış izleyicisi + canlı koşu 75 sn: `overview` p95 23 ms; geç bağlanan izleyici yerleşimi alır; kopan istemci sunucuyu bozmaz; kimliksiz her uç 401, 10 yanlıştan sonra 429; dosya okuma kaçışı (`..`, mutlak, sembolik bağ) 400; HTML içeren dosya adı çalışmaz (XSS yok); tüm düğmelerin erişilebilir adı var.
+**Hâlâ sınanmayanlar (arkadaşın makinesinde ilk işler olmalı):** GitHub üzerinde gerçek git yayını (yazma yetkisi, gecikme), CUDA'da canlı izleme, Windows yolları, günlerce süren çalışma, ağ kopması sırasında git yayını. Kurulum aracı (`ops.setup`) bunların bir kısmını ilk çalıştırmada denetler.

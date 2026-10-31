@@ -9,21 +9,21 @@
 @media (prefers-color-scheme:dark){:root{--bg:#0f1318;--card:#171c23;--ink:#e8ecf1;--mut:#a5afbd;--line:#2c3440;--good:#56b4e9;--bad:#f0914f;--neu:#9aa4b2;--ok:#4cc27f;--warn:#e0b04a;--err:#ff7b6e;--acc:#7aa2ff;--accfg:#0b1020;--canvas:#10151b}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 header{padding:16px;border-bottom:1px solid var(--line);background:var(--card)}h1{font-size:1.3rem;margin:0 0 6px}h2{font-size:1.1rem;margin:0 0 10px}h3{font-size:1rem;margin:0}
-main{max-width:1200px;margin:0 auto;padding:16px;display:grid;gap:16px}
-section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+main{max-width:1200px;margin:0 auto;padding:16px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+section{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
 .strip{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--mut);font-size:.9rem}.strip b{color:var(--ink)}
-.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.grow{flex:1}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.grow{flex:1}.row>*{min-width:0;max-width:100%}select{text-overflow:ellipsis}
 button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
 button.p{background:var(--acc);color:var(--accfg);border-color:var(--acc)}button.d{border-color:var(--err);color:var(--err)}button:disabled{opacity:.45;cursor:not-allowed}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
-input,select{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);max-width:100%}
+#fpath{width:min(40ch,100%)}input,select{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);max-width:100%}
 .job{border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:8px}.job .h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
 .tag{font-size:.8rem;padding:1px 8px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
 .s-running{color:var(--acc)}.s-done{color:var(--ok)}.s-failed,.s-interrupted{color:var(--err)}.s-queued{color:var(--warn)}.s-cancelled{color:var(--mut)}
 .bar{height:12px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:6px}.bar>i{display:block;height:100%;background:var(--acc)}
 .mut{color:var(--mut);font-size:.9rem}pre{background:var(--canvas);border:1px solid var(--line);border-radius:8px;padding:8px;overflow:auto;max-height:260px;font-size:.8rem;margin:6px 0 0;white-space:pre-wrap}
 .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
-.cell{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--canvas)}canvas{width:100%;height:auto;display:block;background:var(--canvas)}
+.cell{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--canvas)}table{display:block;overflow-x:auto;max-width:100%}canvas{width:100%;height:auto;display:block;background:var(--canvas)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.9rem;margin:8px 0}.legend span{display:inline-flex;align-items:center;gap:6px}
 form.f{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));margin-top:8px}form.f label{display:grid;gap:2px;font-size:.9rem}
 details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-top:8px}summary{cursor:pointer;font-weight:600}
@@ -93,13 +93,13 @@ function renderHW(h){const g=h.cuda?h.gpus.map(x=>`${esc(x.name)} (${x.mem_gb} G
 function jobHTML(j,showCtl){const p=j.progress;const pct=p?Math.round(100*p.done/p.total):null;
   const bar=j.status==="running"?`<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" ${pct!==null?`aria-valuenow="${pct}"`:""}><i style="width:${pct??100}%;${pct===null?"opacity:.35":""}"></i></div><div class="mut">${p?`%${pct} — ${esc(p.text)}`:"bu iş için ilerleme ölçülemiyor; yalnız geçen süre gösterilir"} · geçen ${dur(j.elapsed||0)}</div>`:"";
   const ctl=[];
-  if(showCtl){if(j.status==="queued"){ctl.push(`<button data-a="start" data-id="${j.id}" class="p">Şimdi başlat</button><button data-a="up" data-id="${j.id}" aria-label="Yukarı">↑</button><button data-a="down" data-id="${j.id}" aria-label="Aşağı">↓</button><button data-a="cancel" data-id="${j.id}" class="d">Çıkar</button>`)}
-    if(j.status==="running")ctl.push(`<button data-a="cancel" data-id="${j.id}" class="d">Durdur</button>`);
-    if(["failed","interrupted","cancelled"].includes(j.status))ctl.push(`<button data-a="retry" data-id="${j.id}">Yeniden sıraya al</button>`)}
-  ctl.push(`<button data-a="log" data-id="${j.id}">${logOpen.has(j.id)?"Günlüğü gizle":"Günlük"}</button>`);
+  if(showCtl){if(j.status==="queued"){ctl.push(`<button data-a="start" data-id="${esc(j.id)}" class="p">Şimdi başlat</button><button data-a="up" data-id="${esc(j.id)}" aria-label="Yukarı">↑</button><button data-a="down" data-id="${esc(j.id)}" aria-label="Aşağı">↓</button><button data-a="cancel" data-id="${esc(j.id)}" class="d">Çıkar</button>`)}
+    if(j.status==="running")ctl.push(`<button data-a="cancel" data-id="${esc(j.id)}" class="d">Durdur</button>`);
+    if(["failed","interrupted","cancelled"].includes(j.status))ctl.push(`<button data-a="retry" data-id="${esc(j.id)}">Yeniden sıraya al</button>`)}
+  ctl.push(`<button data-a="log" data-id="${esc(j.id)}">${logOpen.has(j.id)?"Günlüğü gizle":"Günlük"}</button>`);
   return `<div class="job"><div class="h"><h3>${esc(j.title||j.test_id)}</h3><span class="tag s-${j.status}">${STAT[j.status]||j.status}</span>${j.validator?'<span class="tag">doğrulayıcı</span>':""}<span class="mut">${esc(j.id)} · deneme ${j.attempts} · kaynak ${esc(j.source)}</span></div>
   <div class="mut">${esc(Object.entries(j.params).map(([k,v])=>k+"="+v).join(" · "))}${j.exit_code!==undefined?` · çıkış kodu ${j.exit_code}`:""}${j.note?` · ${esc(j.note)}`:""}${j.elapsed&&j.status!=="running"?` · süre ${dur(j.elapsed)}`:""}</div>${bar}
-  <div class="row" style="margin-top:6px">${ctl.join("")}</div><div id="log-${j.id}"></div></div>`}
+  <div class="row" style="margin-top:6px">${ctl.join("")}</div><div id="log-${esc(j.id)}"></div></div>`}
 
 function bindJobButtons(root){root.querySelectorAll("button[data-a]").forEach(b=>b.onclick=()=>{const id=b.dataset.id,a=b.dataset.a;
   if(a==="log"){if(logOpen.has(id))logOpen.delete(id);else logOpen.add(id);refresh();return}

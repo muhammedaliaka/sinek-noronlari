@@ -59,6 +59,7 @@ def main(argv=None) -> None:
     r = sub.add_parser("relay")
     r.add_argument("--token", required=True)
     r.add_argument("--spec", default="origin:ops-relay")
+    r.add_argument("--url", default=None, help="uzak depo adresi (verilmezse bu deponun `origin` adresi)")
     r.add_argument("what", choices=["send", "status"])
     r.add_argument("action", nargs="?")
     r.add_argument("arg", nargs="?")
@@ -88,7 +89,7 @@ def main(argv=None) -> None:
         return
     remote, _, branch = a.spec.partition(":")
     work = Path(tempfile.mkdtemp(prefix="ops_relay_"))
-    d = ensure_clone(work / "r", remote, branch or "ops-relay", url=git(R.ROOT, "remote", "get-url", remote).strip())
+    d = ensure_clone(work / "r", remote, branch or "ops-relay", url=a.url or git(R.ROOT, "remote", "get-url", remote).strip())
     if a.what == "status":
         print((d / "status.json").read_text() if (d / "status.json").exists() else "status.json yok (sunucu henüz yazmadı)")
         for p in sorted((d / "reports").glob("*.md"))[-3:] if (d / "reports").exists() else []:
@@ -104,13 +105,27 @@ def main(argv=None) -> None:
     elif a.action != "update":
         raise SystemExit("eylem: enqueue|cancel|start|retry|auto|update")
     cmd["sig"] = sign(a.token, cmd)
-    (d / "commands").mkdir(exist_ok=True)
-    (d / "commands" / f"{cmd['id']}.json").write_text(json.dumps(cmd, ensure_ascii=False, indent=1))
+    br = branch or "ops-relay"
     git(d, "config", "user.name", "sinek-ops-client")
     git(d, "config", "user.email", "sinek-ops-client@users.noreply.github.com")
-    git(d, "add", "-A")
-    git(d, "commit", "-m", f"ops: komut {cmd['id']} {a.action}")
-    git(d, "push", "origin", f"HEAD:{branch or 'ops-relay'}")
+    for attempt in range(6):          # sunucu aynı anda durum itmiş olabilir: dalı sıfırla, komutu yeniden yaz, yeniden dene (sığ klonda rebase güvenilmez)
+        (d / "commands").mkdir(exist_ok=True)
+        (d / "commands" / f"{cmd['id']}.json").write_text(json.dumps(cmd, ensure_ascii=False, indent=1))
+        git(d, "add", "-A")
+        git(d, "commit", "-m", f"ops: komut {cmd['id']} {a.action}")
+        try:
+            git(d, "push", "origin", f"HEAD:{br}")
+            break
+        except RuntimeError:
+            if attempt == 5:
+                raise
+            git(d, "fetch", "--depth", "1", "origin", f"+{br}:refs/remotes/origin/{br}")
+            git(d, "reset", "--hard", f"origin/{br}")
+            time.sleep(0.5 + attempt)
+    # doğrulama: komut dosyası gerçekten uzak dalda mı?
+    git(d, "fetch", "--depth", "1", "origin", f"+{br}:refs/remotes/origin/{br}")
+    if f"commands/{cmd['id']}.json" not in git(d, "ls-tree", "-r", "--name-only", f"origin/{br}").split():
+        raise SystemExit("komut uzak dalda görünmüyor; yeniden gönderin")
     print("komut gönderildi:", cmd["id"], "— sunucu ≤1 dk içinde uygular; sonuç: `relay status` içinde acked")
 
 

@@ -14,6 +14,7 @@ import json
 import os
 import secrets
 import shutil
+import signal
 import subprocess
 import threading
 import time
@@ -57,7 +58,19 @@ def sh(cmd: list[str], timeout: float = 5.0) -> str:
         return ""
 
 
+_HW_CACHE: dict = {"t": 0.0, "v": None}
+
+
 def hardware() -> dict:
+    """Donanım/git bilgisi; her istekte alt süreç (git, nvidia-smi) açmamak için 5 sn önbellek."""
+    if _HW_CACHE["v"] is not None and time.time() - _HW_CACHE["t"] < 5.0:
+        return _HW_CACHE["v"]
+    v = _hardware()
+    _HW_CACHE.update(t=time.time(), v=v)
+    return v
+
+
+def _hardware() -> dict:
     import torch
     info = {"cpu_count": os.cpu_count(), "load": os.getloadavg() if hasattr(os, "getloadavg") else None, "torch": torch.__version__,
             "cuda": torch.cuda.is_available(), "gpus": [], "uptime_s": round(time.time() - START)}
@@ -94,7 +107,11 @@ def list_files(rel: str) -> dict:
         for c in sorted(p.iterdir()):
             if "token" in c.name.lower():
                 continue
-            rows.append({"name": c.name, "dir": c.is_dir(), "size": c.stat().st_size if c.is_file() else None, "mtime": c.stat().st_mtime})
+            try:
+                stt = c.stat()
+            except OSError:                                    # kırık bağlantı vb.
+                continue
+            rows.append({"name": c.name, "dir": c.is_dir(), "size": stt.st_size if c.is_file() else None, "mtime": stt.st_mtime})
         return {"path": str(p.relative_to(ROOT)), "entries": rows[:500]}
     if p.is_file():
         data = p.read_bytes()
@@ -134,7 +151,7 @@ class App:
     # --- API iş mantığı (kuyruk görünümü vb.)
     def overview(self) -> dict:
         self.jobs.reconcile()
-        jobs = [self.jobs.view(j) for j in self.jobs.state["jobs"]]
+        jobs = [self.jobs.view(j) for j in self.jobs.state["jobs"][-150:]]     # eski işler görünümü şişirmesin (state.json'da kalır)
         done_ids = {j["test_id"] for j in jobs if j["status"] == "done"}
         queued_ids = {j["test_id"] for j in jobs if j["status"] in ("queued", "running")}
         return {"time": time.time(), "hardware": hardware(), "auto": self.jobs.state["auto"], "max_running": self.jobs.max_running,
@@ -239,7 +256,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json([t.public() for t in R.REGISTRY.values()])
             if u.path.startswith("/api/jobs/") and u.path.endswith("/log"):
                 jid = u.path.split("/")[3]
-                return self._send(200, a.jobs.log_tail(jid, int(qs.get("bytes", 20000))).encode(), "text/plain; charset=utf-8")
+                try:
+                    nb = max(100, min(200_000, int(qs.get("bytes", 20000))))
+                except ValueError:
+                    raise R.ParamError("bytes sayı olmalı")
+                return self._send(200, a.jobs.log_tail(jid, nb).encode(), "text/plain; charset=utf-8")
             if u.path == "/api/files":
                 return self._json(list_files(qs.get("path", "results")))
             if u.path == "/api/replays":
@@ -361,10 +382,11 @@ def main(argv=None) -> None:
     ap.add_argument("--token", default=None, help="verilmezse SINEK_OPS_TOKEN ya da ~/.sinek_ops_token (yoksa üretilir)")
     ap.add_argument("--auto", action="store_true", help="açılışta otomatik kuyruğu aç (kuyruktaki işler sırayla koşar)")
     ap.add_argument("--max-running", type=int, default=1)
+    ap.add_argument("--ops-dir", default=None, help="durum/günlük dizini (varsayılan results/ops; birden çok örnek ya da sınama için)")
     ap.add_argument("--relay", default=None, help="git yayını için uzak:dal (ör. origin:ops-relay) — bağlantı kabul edemeyen makineler için (docs/uzak_kontrol.md)")
     a = ap.parse_args(argv)
     token = load_or_create_token(a.token)
-    jobs = JobManager(max_running=a.max_running)
+    jobs = JobManager(a.ops_dir, max_running=a.max_running)
     if a.auto:
         jobs.set_auto(True)
     jobs.start()
@@ -372,13 +394,20 @@ def main(argv=None) -> None:
     if a.relay:
         from .relay import Relay
         Relay(app, a.relay, token).start()
-    print(f"Sinek kontrol sunucusu: http://{a.host}:{a.port}/?token={token}", flush=True)
+    print(f"Sinek kontrol sunucusu: http://{a.host}:{srv.server_address[1]}/?token={token}", flush=True)
     if a.host not in ("127.0.0.1", "localhost", "::1"):
         print("UYARI: ağdan erişime açık ve TLS yok. İnternet üzerinden doğrudan açmayın; tünel/VPN kullanın (docs/uzak_kontrol.md).", flush=True)
+    def _stop(signum, _frame):          # SIGINT arka plan işlerinde yok sayılabilir; SIGTERM (systemd/kill) de düzgün kapansın
+        print(f"sinyal {signum}: kapatılıyor (çalışan işler devam eder; yeniden başlatınca bağlanır)", flush=True)
+        threading.Thread(target=srv.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGINT, _stop)
+    signal.signal(signal.SIGTERM, _stop)
     try:
         srv.serve_forever()
-    except KeyboardInterrupt:
-        print("kapatılıyor (çalışan işler devam eder; yeniden başlatınca bağlanır)")
+    finally:
+        jobs.stop()
+        srv.server_close()
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ import json
 import os
 import signal
 import subprocess
+import sys
 import threading
 import time
 import uuid
@@ -26,7 +27,23 @@ def now() -> float:
     return time.time()
 
 
+IS_WIN = os.name == "nt"
+# Sarmalayıcı (bash'ten bağımsız, her platformda): komutu koşturur, çıkış kodunu dosyaya yazar. Sinyalle ölürse 128+sinyal.
+WRAPPER = ("import subprocess,sys;c=subprocess.call(sys.argv[2:]);"
+           "open(sys.argv[1],'w').write(str(128-c if c<0 else c))")
+
+
 def _alive(pid: int) -> bool:
+    if IS_WIN:                                  # Windows'ta os.kill(pid, 0) süreci ÖLDÜRÜR; yalnız sorgu yap [denenmedi: Windows]
+        import ctypes
+        k = ctypes.windll.kernel32
+        h = k.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return False
+        code = ctypes.c_ulong()
+        ok = k.GetExitCodeProcess(h, ctypes.byref(code))
+        k.CloseHandle(h)
+        return bool(ok) and code.value == 259   # STILL_ACTIVE
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -96,7 +113,7 @@ class JobManager:
             out["title"] = t.title
             out["group"] = t.group
             out["validator"] = t.validator
-            if t.progress:
+            if t.progress and j["status"] in ("running", "queued"):
                 try:
                     d, tot, txt = t.progress(j["params"])
                     out["progress"] = {"done": d, "total": tot, "text": txt}
@@ -183,11 +200,12 @@ class JobManager:
         t = self.reg[j["test_id"]]
         argv = t.argv(j["params"])
         j["argv"] = argv
-        wrapper = ["bash", "-c", '"$@"; echo $? > "$0"', str(exitp), *argv]
+        wrapper = [sys.executable, "-I", "-c", WRAPPER, str(exitp), *argv]
+        kw = {"creationflags": 0x00000200 | 0x00000008} if IS_WIN else {"start_new_session": True}   # yeni süreç grubu / ayrık
         with open(logp, "ab") as lf:
             lf.write(f"\n=== {time.strftime('%F %T')} başlıyor (deneme {j['attempts'] + 1}): {' '.join(argv)}\n".encode())
             lf.flush()
-            p = subprocess.Popen(wrapper, cwd=ROOT, stdout=lf, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
+            p = subprocess.Popen(wrapper, cwd=ROOT, stdout=lf, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, **kw)
         j.update(status="running", pid=p.pid, started=now(), attempts=j["attempts"] + 1)
         j.pop("ended", None)
         j.pop("exit_code", None)
@@ -198,6 +216,9 @@ class JobManager:
     def _kill(self, j: dict) -> None:
         pid = j.get("pid")
         if not pid:
+            return
+        if IS_WIN:
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(pid)], capture_output=True)    # [denenmedi: Windows]
             return
         try:
             os.killpg(pid, signal.SIGTERM)

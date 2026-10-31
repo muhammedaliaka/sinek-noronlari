@@ -8,6 +8,7 @@ from __future__ import annotations
 import glob
 import subprocess
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -67,10 +68,16 @@ def safe_results_file(rel: str, suffix: str | None = None) -> str:
     return str(p.relative_to(ROOT))
 
 
+_PRE_CACHE: dict = {"t": 0.0, "v": []}
+
+
 def find_pre_files() -> list[str]:
-    """Bulunan ön-eğitimli popülasyon dosyaları (gerçek dosyalar)."""
+    """Bulunan ön-eğitimli popülasyon dosyaları (gerçek dosyalar). results/ büyükse yinelenen taramayı önlemek için 10 sn önbellek."""
+    if time.time() - _PRE_CACHE["t"] < 10.0:
+        return list(_PRE_CACHE["v"])
     out = sorted(glob.glob(str(ROOT / "results" / "**" / "pre_*.npz"), recursive=True))
-    return [str(Path(p).relative_to(ROOT)) for p in out]
+    _PRE_CACHE.update(t=time.time(), v=[str(Path(p).relative_to(ROOT)) for p in out])
+    return list(_PRE_CACHE["v"])
 
 
 def git_tracked_commit(path: str) -> str | None:

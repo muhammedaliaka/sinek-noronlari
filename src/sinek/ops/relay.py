@@ -97,6 +97,20 @@ class Relay:
                 self.app.relay_info = {"branch": f"{self.remote}:{self.branch}", "last_sync": time.time(), "error": str(e)[:300]}
             self.stop.wait(self.cycle)
 
+    def acks_path(self) -> Path:
+        return self.app.jobs.dir / "relay_acks.json"
+
+    def load_acks(self) -> dict:
+        try:
+            return json.loads(self.acks_path().read_text())
+        except Exception:
+            return {}
+
+    def save_acks(self, acked: dict) -> None:
+        tmp = self.acks_path().with_suffix(".tmp")
+        tmp.write_text(json.dumps(acked))
+        tmp.replace(self.acks_path())
+
     def remote_head(self) -> str | None:
         try:
             url = self.url or git(ROOT, "remote", "get-url", self.remote).strip()
@@ -150,18 +164,24 @@ class Relay:
         d = ensure_clone(self.dir, self.remote, self.branch, self.url)
         st_path = d / "status.json"
         prev = json.loads(st_path.read_text()) if st_path.exists() else {}
-        acked: dict = prev.get("acked", {})
+        acked: dict = {**prev.get("acked", {}), **self.load_acks()}      # yerel kayıt itme reddedilse bile komutun ikinci kez uygulanmasını önler
         for p in sorted((d / "commands").glob("*.json")) if (d / "commands").exists() else []:
             try:
                 cmd = json.loads(p.read_text())
             except json.JSONDecodeError:
+                continue
+            if not isinstance(cmd, dict):
                 continue
             cid = str(cmd.get("id", p.stem))
             if cid in acked:
                 continue
             why = verify(self.token, cmd)
             acked[cid] = {"at": time.time(), "result": ("RET: " + why) if why else self.apply(cmd)}
-        acked = dict(sorted(acked.items(), key=lambda kv: kv[1]["at"])[-300:])
+            self.save_acks(acked)                                         # uygulamadan HEMEN sonra kalıcı
+        cut = time.time() - (MAX_AGE + 86400)                             # yaşa göre buda: süresi dolmamış hiçbir komut yeniden oynatılamaz
+        acked = {k: v for k, v in acked.items() if v["at"] > cut}
+        acked = dict(sorted(acked.items(), key=lambda kv: kv[1]["at"])[-5000:])
+        self.save_acks(acked)
         ov = self.app.overview()
         jobs = [{k: j.get(k) for k in ("id", "test_id", "status", "attempts", "created", "started", "ended", "exit_code", "progress", "note", "params")} for j in ov["jobs"][-40:]]
         hw = ov["hardware"]
